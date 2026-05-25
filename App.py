@@ -10580,19 +10580,7 @@ def security_info():
     """
 
 # ----------------- Server Run -----------------
-if __name__=="__main__":
-    init_db()
-    # Run optimizer once at startup — improves query planning for the session
-    _opt_conn = get_db_connection()
-    try:
-        _opt_conn.execute("PRAGMA optimize")
-        _opt_conn.commit()
-    finally:
-        return_db_connection(_opt_conn)
-    print("Exomnia Super App on http://0.0.0.0:5000")
-    print("Main App: http://0.0.0.0:5000/main")
-    print("Chat Login: http://0.0.0.0:5000/")
-    print("Security Info: http://0.0.0.0:5000/security")
-    print("All systems integrated")
-    socketio.run(app, host="0.0.0.0", port=5000, debug=False, allow_unsafe_werkzeug=True)
- 
+
+ if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port, debug=False)

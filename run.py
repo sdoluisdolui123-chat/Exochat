@@ -1,17 +1,14 @@
-#!/usr/bin/env python
-"""Entry point for the application - Gunicorn compatible"""
-import sys
 import os
+import sys
 
-# Add the project directory to the Python path
+# Add project directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Import for gunicorn
+# Import app for both local and gunicorn
 from App import app, socketio
-from config import get_config
 
-# For local development
 if __name__ == '__main__':
+    from config import get_config
     config = get_config()
     socketio.run(
         app,

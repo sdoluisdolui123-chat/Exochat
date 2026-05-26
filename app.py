@@ -22,7 +22,7 @@ import logging
 logging.basicConfig(level=logging.WARNING)
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = secrets.token_hex(32)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', secrets.token_hex(32))
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
@@ -10578,6 +10578,9 @@ def security_info():
     </body>
     </html>
     """
+
+# Initialize database
+init_db()
 
 # ----------------- Server Run -----------------
 

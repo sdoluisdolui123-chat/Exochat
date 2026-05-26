@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: exochat
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:$PORT run:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.6
+      - key: FLASK_ENV
+        value: production
+      - key: FLASK_DEBUG
+        value: false

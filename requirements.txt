@@ -1,6 +1,6 @@
 flask
 flask-socketio
-eventlet
+eventlet==0.33.3
 cryptography
 werkzeug
 gunicorn

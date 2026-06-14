@@ -1,6 +1,0 @@
-flask
-flask-socketio
-eventlet==0.33.3
-cryptography
-werkzeug
-gunicorn

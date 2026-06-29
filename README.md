@@ -1,2 +1,2 @@
 # Exochat
-EXOMNIA's chat application 
+EXOMNIA's chat NEOX CHAT APPLICATION

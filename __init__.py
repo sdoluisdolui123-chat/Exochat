@@ -1,10 +1,21 @@
 """
-Exomnia chat/social/collaboration backend.
-
-This package is a straight, behavior-preserving split of the original
-single-file `main110.py` (13k+ lines) into normal Python modules so it
-can be reviewed and version-controlled sanely with git.
-
-Import `exomnia.app.create_app()` to get a ready-to-run Flask app, or
-just run `run.py` at the repo root.
+Importing this package registers every route module's @app.route
+decorators onto the shared Flask `app` instance (see extensions.py).
+Order doesn't matter for Flask routing, but we keep it roughly the
+same as the original monolith for readability.
 """
+from . import auth
+from . import main
+from . import files
+from . import contacts
+from . import profile
+from . import messages
+from . import chat
+from . import groups
+from . import voice
+from . import social
+
+__all__ = [
+    "auth", "main", "files", "contacts", "profile",
+    "messages", "chat", "groups", "voice", "social",
+]

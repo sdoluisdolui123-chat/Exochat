@@ -1,7 +1,0 @@
-flask
-flask-compress
-flask-socketio
-gevent
-gevent-websocket
-cryptography
-werkzeug

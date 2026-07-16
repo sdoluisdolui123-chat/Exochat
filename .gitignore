@@ -1,9 +1,0 @@
-__pycache__/
-*.pyc
-*.pyo
-chat.db
-chat.db-wal
-chat.db-shm
-uploads/
-.venv/
-venv/

@@ -1,1 +1,39 @@
 
+{
+  "name": "Exomnia Super App",
+  "short_name": "Exomnia",
+  "description": "Chat, groups, and social — all in one place.",
+  "start_url": "/main",
+  "id": "/main",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0E4950",
+  "theme_color": "#0E4950",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

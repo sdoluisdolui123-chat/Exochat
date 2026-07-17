@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Group Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#0E4950">
+    <link rel="icon" href="/static/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"></noscript>
+    <style>
+
+        :root {
+            --primary: #0E4950;
+            --primary-light: #1a6b75;
+            --accent: #2ec4b6;
+            --bg: #eef6f6;
+            --border: #d8e8e8;
+            --text: #1a2e2f;
+            --text-sec: #4a6567;
+            --light: #8aa3a5;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+        html { height:100%; height:-webkit-fill-available; }
+
+        body {
+            font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+            display:flex; flex-direction:column;
+            height:100vh; height:100dvh;
+            min-height:-webkit-fill-available;
+            background:#eef6f6; color:var(--text);
+            overflow:hidden; position:fixed; width:100%; top:0; left:0;
+        }
+
+        /* ── Header ── */
+        #grp-header {
+            background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);
+            color:#fff;
+            padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px;
+            display:flex; align-items:center; gap:12px;
+            box-shadow:0 2px 16px rgba(14,73,80,0.25);
+            z-index:10; position:relative; flex-shrink:0;
+        }
+
+        .grp-back {
+            background:rgba(255,255,255,0.15); border:none; color:#fff;
+            padding:7px 10px; border-radius:10px; cursor:pointer; font-size:18px;
+            display:flex; align-items:center; justify-content:center;
+            transition:background 0.2s;
+        }
+        .grp-back:hover { background:rgba(255,255,255,0.25); }
+
+        .grp-avatar {
+            width:42px; height:42px; border-radius:12px;
+            background:linear-gradient(135deg,var(--accent),var(--primary-light));
+            display:flex; align-items:center; justify-content:center;
+            font-weight:700; font-size:17px; border:2px solid rgba(255,255,255,0.3);
+            flex-shrink:0;
+        }
+
+        .grp-info { flex:1; min-width:0; }
+        .grp-name { font-size:17px; font-weight:700; letter-spacing:-0.01em; }
+        .grp-meta { font-size:12px; opacity:0.8; margin-top:1px; cursor:pointer; }
+
+        .grp-info-btn {
+            background:rgba(255,255,255,0.15); border:none; color:#fff;
+            width:36px; height:36px; border-radius:50%; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:background 0.2s; flex-shrink:0;
+        }
+        .grp-info-btn:hover { background:rgba(255,255,255,0.25); }
+
+        /* ── Chat area ── */
+        #grp-chat-container {
+            flex:1; display:flex; flex-direction:column;
+            overflow:hidden; min-height:0;
+            background:#eef6f6;
+            background-image:radial-gradient(circle,rgba(14,73,80,0.045) 1px,transparent 1px);
+            background-size:22px 22px;
+        }
+
+        #grp-chat {
+            flex:1; overflow-y:auto; padding:20px 16px 12px;
+            display:flex; flex-direction:column; gap:4px;
+            scroll-behavior:auto;
+        }
+
+        #grp-chat::-webkit-scrollbar { width:4px; }
+        #grp-chat::-webkit-scrollbar-thumb { background:rgba(14,73,80,0.2); border-radius:4px; }
+
+        #grp-typing {
+            font-size:13px; color:var(--text-sec); margin:0 16px 8px;
+            height:18px; font-style:italic; flex-shrink:0;
+        }
+
+        /* ── Message groups ── */
+        .grp-msg-group {
+            display:flex; flex-direction:column; margin-bottom:10px; max-width:82%;
+        }
+        .grp-sent-group { align-self:flex-end; align-items:flex-end; }
+        .grp-recv-group { align-self:flex-start; align-items:flex-start; }
+
+        .grp-sender-label {
+            font-size:11px; font-weight:600; color:var(--accent);
+            margin-bottom:2px; padding:0 4px;
+        }
+
+        .bubble {
+            padding:11px 15px; border-radius:20px; margin:2px 0;
+            font-size:15px; line-height:1.5; word-wrap:break-word;
+            white-space:pre-wrap; word-break:break-word; max-width:100%;
+            user-select:none; -webkit-user-select:none;
+            transition:transform 0.1s, box-shadow 0.15s;
+            will-change:transform;
+            contain:content;
+        }
+        .bubble:active { transform:scale(0.985); }
+        .sent { background:linear-gradient(135deg,#d4f5ef,#c8ede7); border-bottom-right-radius:5px; border:1px solid rgba(46,196,182,0.2); box-shadow:0 1px 4px rgba(14,73,80,0.08); }
+        .received { background:#fff; border-bottom-left-radius:5px; border:1px solid #e8eeee; box-shadow:0 1px 4px rgba(0,0,0,0.05); }
+
+        .msg-time { font-size:10px; color:var(--light); margin-top:2px; padding:0 2px; font-family:'DM Mono',monospace; }
+
+        /* ── Input bar ── */
+        #grp-message-box {
+            display:flex; padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px));
+            background:#fff; border-top:1px solid var(--border);
+            gap:8px; align-items:center; min-height:66px;
+            box-shadow:0 -4px 20px rgba(14,73,80,0.06); flex-shrink:0;
+        }
+
+        #grp-message {
+            flex:1; padding:11px 16px; font-size:15px;
+            border:1.5px solid var(--border); border-radius:24px;
+            outline:none; resize:none; max-height:120px;
+            font-family:'DM Sans',inherit; background:#f8fafa;
+            line-height:1.45; overflow-y:auto; min-height:44px;
+            height:auto; white-space:pre-wrap; word-wrap:break-word;
+            color:var(--text); transition:border-color 0.2s,box-shadow 0.2s;
+        }
+        #grp-message:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(46,196,182,0.12); }
+        #grp-message::placeholder { color:var(--light); }
+
+        #grp-send-btn {
+            width:48px; height:48px; border:none; border-radius:50%;
+            background:linear-gradient(135deg,var(--primary),var(--primary-light));
+            color:white; font-size:18px; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            transition:transform 0.15s,box-shadow 0.15s; flex-shrink:0;
+            box-shadow:0 3px 14px rgba(14,73,80,0.35);
+        }
+        #grp-send-btn:hover { transform:scale(1.07); box-shadow:0 5px 18px rgba(14,73,80,0.45); }
+        #grp-send-btn:active { transform:scale(0.93); }
+
+        #grp-file-btn {
+            width:40px; height:40px; border:none; border-radius:50%;
+            background:#e8f6f5; color:var(--accent);
+            display:flex; align-items:center; justify-content:center;
+            cursor:pointer; flex-shrink:0; transition:background 0.18s,transform 0.15s;
+        }
+        #grp-file-btn:hover { background:#d0efed; transform:scale(1.07); }
+        #grp-file-btn:active { transform:scale(0.93); }
+
+        #grp-mic-btn {
+            width:48px !important; height:48px !important; border-radius:50% !important;
+            border:none !important;
+            background:linear-gradient(135deg,var(--primary),var(--primary-light)) !important;
+            color:#fff !important; display:flex !important; align-items:center !important;
+            justify-content:center !important; cursor:pointer !important; flex-shrink:0 !important;
+            transition:transform 0.15s,box-shadow 0.15s !important;
+            box-shadow:0 3px 14px rgba(14,73,80,.35) !important;
+        }
+        #grp-mic-btn:hover  { transform:scale(1.07) !important; }
+        #grp-mic-btn:active { transform:scale(0.93) !important; }
+        #grp-mic-btn.grp-vm-rec { background:#e63946 !important; box-shadow:0 0 0 4px rgba(230,57,70,.25) !important; animation:gvmMicPulse 1s infinite !important; }
+
+        /* ── Members panel ── */
+        #members-panel {
+            display:none; position:fixed; top:0; left:0; width:100%; height:100%;
+            background:rgba(10,30,30,0.55); backdrop-filter:blur(6px);
+            z-index:2000; align-items:flex-end; justify-content:center;
+        }
+        .members-sheet {
+            background:#fff; border-radius:28px 28px 0 0;
+            padding:22px 20px calc(28px + env(safe-area-inset-bottom,0px));
+            width:100%; max-height:70vh; overflow-y:auto;
+            animation:slideUpFromBottom 0.35s cubic-bezier(0.25,0.46,0.45,0.94);
+        }
+        .members-handle { width:36px; height:4px; background:#ccd8d8; border-radius:2px; margin:0 auto 18px; }
+
+        @keyframes slideUpFromBottom {
+            from { opacity:0; transform:translateY(100%); }
+            to { opacity:1; transform:translateY(0); }
+        }
+
+        /* ── Media message ── */
+        .media-message { max-width:280px; cursor:pointer; }
+        .media-preview { border-radius:16px; overflow:hidden; margin-bottom:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15); }
+        .media-preview img { width:100%; height:auto; display:block; }
+
+        .file-message { display:flex; align-items:center; gap:12px; padding:14px; background:#f8f9fa; border-radius:14px; border:1px solid #e9ecef; }
+        .file-icon-box { width:44px; height:44px; border-radius:10px; display:flex; align-items:center; justify-content:center; background:#E3F2FD; color:#2196F3; flex-shrink:0; }
+        .file-dl-btn { background:linear-gradient(135deg,var(--primary),var(--primary-light)); color:white; border:none; border-radius:8px; padding:8px 12px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap; }
+
+        /* Toast */
+        .grp-toast { position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:rgba(14,73,80,0.88); color:white; padding:10px 20px; border-radius:22px; font-size:13px; font-weight:600; z-index:9999; pointer-events:none; white-space:nowrap; }
+
+        /* ── Context menu ── */
+        #grp-context-menu {
+            position:fixed; z-index:9000; background:#fff;
+            border-radius:18px; padding:8px 0;
+            box-shadow:0 8px 32px rgba(14,73,80,0.18),0 2px 8px rgba(0,0,0,0.10);
+            min-width:160px; display:none;
+            border:1px solid rgba(14,73,80,0.08);
+            animation:grpCtxFadeIn 0.15s ease;
+        }
+        @keyframes grpCtxFadeIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+        .grp-ctx-item {
+            display:flex; align-items:center; gap:10px;
+            padding:11px 18px; font-size:14px; font-weight:500;
+            color:#1a2e2f; cursor:pointer; transition:background 0.15s;
+        }
+        .grp-ctx-item:hover { background:#f0faf9; }
+        .grp-ctx-item svg { flex-shrink:0; }
+
+        /* ── Emoji picker ── */
+        #grp-emoji-bar {
+            position:fixed; z-index:9001; background:#fff;
+            border-radius:50px; padding:8px 14px;
+            box-shadow:0 8px 28px rgba(14,73,80,0.18);
+            display:none; gap:6px; align-items:center;
+            border:1px solid rgba(14,73,80,0.08);
+            animation:grpCtxFadeIn 0.15s ease;
+        }
+        .grp-emoji-btn {
+            font-size:22px; cursor:pointer; padding:4px 6px;
+            border-radius:50%; transition:all 0.15s; border:none; background:none;
+            line-height:1;
+        }
+        .grp-emoji-btn:hover { background:#f0faf9; transform:scale(1.25); }
+
+        /* ── Reactions display ── */
+        .grp-msg-reactions {
+            display:flex; flex-wrap:wrap; gap:4px;
+            margin-top:4px;
+        }
+        .grp-reaction-pill {
+            display:flex; align-items:center; gap:3px;
+            background:rgba(46,196,182,0.12); border:1px solid rgba(46,196,182,0.25);
+            border-radius:20px; padding:3px 8px;
+            font-size:13px; cursor:pointer; transition:all 0.15s;
+        }
+        .grp-reaction-pill:hover { background:rgba(46,196,182,0.22); transform:scale(1.05); }
+        .grp-reaction-pill .grp-r-count { font-size:11px; font-weight:700; color:var(--primary); }
+
+        @media(max-width:480px) {
+            .bubble { padding:10px 14px; font-size:14px; }
+            .grp-msg-group { max-width:90%; }
+        }
+
+        /* ── Image viewer ── */
+        #grp-img-viewer {
+            display:none; position:fixed; inset:0; z-index:5000;
+            background:rgba(0,0,0,0.92);
+            align-items:center; justify-content:center;
+        }
+        #grp-img-viewer.open { display:flex; }
+        #grp-img-viewer img {
+            max-width:92vw; max-height:88vh;
+            border-radius:10px; object-fit:contain;
+            box-shadow:0 8px 40px rgba(0,0,0,0.5);
+        }
+        #grp-img-viewer-close {
+            position:absolute; top:18px; right:18px;
+            background:rgba(255,255,255,0.15); border:none; color:#fff;
+            width:40px; height:40px; border-radius:50%; cursor:pointer;
+            display:flex; align-items:center; justify-content:center;
+            font-size:22px; transition:background 0.2s;
+        }
+        #grp-img-viewer-close:hover { background:rgba(255,255,255,0.28); }
+
+        .media-preview { cursor:pointer; }
+        .media-preview img { transition:opacity 0.15s; }
+        .media-preview:active img { opacity:0.75; }
+
+        /* ── Voice Message Styles (group) ── */
+        #grp-vm-overlay{display:none;position:fixed;inset:0;z-index:9000;background:rgba(14,73,80,0.94);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);flex-direction:column;align-items:center;justify-content:center;gap:22px;}
+        #grp-vm-overlay.active{display:flex;}
+        #grp-vm-timer{font-size:54px;font-weight:700;color:#fff;letter-spacing:-2px;font-variant-numeric:tabular-nums;font-family:'DM Mono',monospace;}
+        #grp-vm-label{font-size:11px;font-weight:600;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:3px;}
+        #grp-vm-canvas{width:280px;height:60px;border-radius:12px;}
+        .grp-vm-dot{width:10px;height:10px;border-radius:50%;background:#ff4d4d;animation:gvmPulse 1.1s ease-in-out infinite;}
+        @keyframes gvmPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.6);opacity:.4;}}
+        .grp-vm-actions{display:flex;gap:28px;margin-top:6px;}
+        .grp-vm-btn{width:62px;height:62px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .14s;}
+        .grp-vm-btn:active{transform:scale(.9);}
+        #grp-vm-cancel-btn{background:rgba(255,255,255,.14);color:#fff;}
+        #grp-vm-send-btn{background:#fff;color:var(--primary);box-shadow:0 6px 22px rgba(0,0,0,.26);}
+        #grp-mic-btn.grp-vm-rec{background:#e63946;animation:gvmMicPulse 1s infinite;}
+        @keyframes gvmMicPulse{0%,100%{box-shadow:0 0 0 0 rgba(230,57,70,.55);}50%{box-shadow:0 0 0 10px rgba(230,57,70,0);}}
+        .gvm-bubble{display:flex;align-items:center;gap:10px;padding:10px 13px;border-radius:20px;max-width:300px;min-width:210px;font-family:'DM Sans',sans-serif;user-select:none;position:relative;}
+        .gvm-bubble.gvm-out{background:linear-gradient(135deg,#d4f5ef,#c8ede7);border-bottom-right-radius:5px;border:1px solid rgba(46,196,182,.2);box-shadow:0 1px 4px rgba(14,73,80,.08);margin-left:auto;}
+        .gvm-bubble.gvm-in{background:#fff;border-bottom-left-radius:5px;border:1px solid #e8eeee;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+        .gvm-bubble.gvm-uploading::after{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);background-size:200% 100%;animation:gvmShimmer 1.3s infinite;}
+        @keyframes gvmShimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+        .gvm-play{width:38px;height:38px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .14s;}
+        .gvm-play:active{transform:scale(.9);}
+        .gvm-bubble.gvm-out .gvm-play{background:rgba(14,73,80,.13);color:var(--primary);}
+        .gvm-bubble.gvm-in .gvm-play{background:#e0f2f4;color:var(--primary);}
+        .gvm-ww{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;}
+        .gvm-wave{display:flex;align-items:center;gap:2px;height:30px;cursor:pointer;}
+        .gvm-bar{flex:1;border-radius:2px;min-width:2px;transition:background .1s;}
+        .gvm-bubble.gvm-out .gvm-bar{background:rgba(14,73,80,.22);}
+        .gvm-bubble.gvm-out .gvm-bar.gvm-p{background:var(--primary);}
+        .gvm-bubble.gvm-in .gvm-bar{background:rgba(14,73,80,.18);}
+        .gvm-bubble.gvm-in .gvm-bar.gvm-p{background:var(--primary);}
+        .gvm-meta{display:flex;justify-content:space-between;align-items:center;font-size:10px;opacity:.7;}
+        .gvm-dur{font-variant-numeric:tabular-nums;font-weight:500;}
+        /* Group voice message reaction wrapper */
+        .gvm-react-wrap{display:flex;flex-direction:column;max-width:300px;}
+        .gvm-react-wrap.gvm-out{align-items:flex-end;margin-left:auto;}
+        .gvm-react-wrap.gvm-in{align-items:flex-start;}
+        .gvm-react-wrap .grp-msg-reactions,.gvm-react-wrap .message-reactions{margin-top:3px;margin-left:4px;margin-right:4px;}
+
+        /* ── Desktop / PC layout ── */
+        .desktop-rail { display: none; }
+        @media (min-width: 860px) {
+            .desktop-rail {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 6px;
+                position: fixed;
+                top: 0; left: 0; bottom: 0;
+                width: 88px;
+                background: linear-gradient(180deg, #0E4950 0%, #0a3238 100%);
+                padding: 24px 0;
+                z-index: 500;
+                box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+            }
+            .desktop-rail .rail-logo {
+                width: 46px; height: 46px; border-radius: 14px;
+                background: linear-gradient(135deg, #2EC4B6, #1a9e93);
+                display: flex; align-items: center; justify-content: center;
+                color: #fff; font-weight: 800; font-size: 19px;
+                margin-bottom: 22px;
+            }
+            .desktop-rail .rail-item {
+                width: 56px; height: 56px; border-radius: 14px;
+                display: flex; flex-direction: column; align-items: center; justify-content: center;
+                gap: 3px;
+                color: rgba(255,255,255,0.55);
+                font-size: 10px; font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                transition: all .15s ease;
+            }
+            .desktop-rail .rail-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+            body {
+                left: 88px;
+                right: 0;
+                top: 0;
+                bottom: 0;
+                overflow: hidden;
+                transform: translateZ(0);
+            }
+            #grp-header {
+                padding-left: max(24px, calc((100% - 680px) / 2));
+                padding-right: max(24px, calc((100% - 680px) / 2));
+            }
+            #grp-chat {
+                padding-left: max(24px, calc((100% - 680px) / 2));
+                padding-right: max(24px, calc((100% - 680px) / 2));
+            }
+            #grp-message-box {
+                padding-left: max(20px, calc((100% - 680px) / 2));
+                padding-right: max(20px, calc((100% - 680px) / 2));
+            }
+            #grp-typing {
+                padding-left: max(24px, calc((100% - 680px) / 2));
+                padding-right: max(24px, calc((100% - 680px) / 2));
+            }
+            .grp-msg-group {
+                max-width: 65%;
+            }
+        }
+        body.embed-desktop .desktop-rail { display: none !important; }
+        body.embed-desktop { left: 0 !important; }
+        body.embed-desktop #grp-header,
+        body.embed-desktop #grp-chat,
+        body.embed-desktop #grp-message-box,
+        body.embed-desktop #grp-typing {
+            padding-left: 20px !important;
+            padding-right: 20px !important;
+        }
+    </style>
+</head>
+<body>
+    <script>
+      if (new URLSearchParams(location.search).get('embed') === 'desktop') {
+        document.body.classList.add('embed-desktop');
+      }
+    </script>
+
+    <div class="desktop-rail">
+        <div class="rail-logo">E</div>
+        <a class="rail-item" href="/main" title="Back to chats">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+            <span>Back</span>
+        </a>
+    </div>
+
+<div id="grp-header">
+    <button class="grp-back" onclick="goBack()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div class="grp-avatar" id="grpAvatar">{{ avatar_letter }}</div>
+    <div class="grp-info">
+        <div class="grp-name">{{ group_name }}</div>
+        <div class="grp-meta" onclick="openMembersPanel()" id="grpMeta">Loading members…</div>
+    </div>
+    <button class="grp-info-btn" onclick="openMembersPanel()" title="Group info">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </button>
+</div>
+
+<div id="grpConnectingBanner" style="display:none; text-align:center; font-size:12.5px; font-weight:600; color:#7a5b00; background:#fff3cd; padding:6px 10px;">
+    Connecting…
+</div>
+
+<div id="grp-chat-container">
+    <div id="grp-chat">
+        <div id="grpLoadingIndicator" style="text-align:center;padding:12px;color:var(--light);font-size:13px;font-style:italic;">Loading messages…</div>
+    </div>
+    <div id="grp-typing"></div>
+</div>
+
+<!-- Image viewer -->
+<div id="grp-img-viewer" onclick="closeGrpImgViewer()">
+    <button id="grp-img-viewer-close" onclick="closeGrpImgViewer()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <img id="grp-img-viewer-img" src="" alt="">
+</div>
+
+<!-- Group Voice Recording Overlay -->
+<div id="grp-vm-overlay">
+    <div style="display:flex;align-items:center;gap:10px;">
+        <div class="grp-vm-dot"></div>
+        <span id="grp-vm-label">RECORDING</span>
+    </div>
+    <canvas id="grp-vm-canvas" width="560" height="120"></canvas>
+    <div id="grp-vm-timer">0:00</div>
+    <div class="grp-vm-actions">
+        <button class="grp-vm-btn" id="grp-vm-cancel-btn" onclick="GVM.cancel()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <button class="grp-vm-btn" id="grp-vm-send-btn" onclick="GVM.stopAndSend()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+    </div>
+</div>
+
+<div id="grp-message-box">
+    <button id="grp-file-btn" onclick="openGrpFileModal()" title="Send file">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </button>
+    <textarea id="grp-message" placeholder="Message group…" rows="1"></textarea>
+    <button id="grp-mic-btn" onclick="GVM.toggle()" title="Voice message">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+    </button>
+    <button id="grp-send-btn" onclick="sendGroupMessage()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white"/></svg>
+    </button>
+</div>
+
+<!-- File upload modal (reuses same pattern as 1:1 chat) -->
+<div id="grpFileModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,30,30,0.55);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 22px calc(32px + env(safe-area-inset-bottom,0px));width:100%;">
+        <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 18px;"></div>
+        <h3 style="color:var(--primary);font-size:20px;font-weight:700;margin-bottom:6px;">Share File</h3>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0;">
+            <div onclick="triggerGrpFile('image')" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 10px;border:1.5px solid var(--border);border-radius:18px;cursor:pointer;background:#f7fafa;">
+                <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#d4edda,#a8d8b0);display:flex;align-items:center;justify-content:center;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <span style="font-size:13px;font-weight:600;">Photos</span>
+            </div>
+            <div onclick="triggerGrpFile('video')" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 10px;border:1.5px solid var(--border);border-radius:18px;cursor:pointer;background:#f7fafa;">
+                <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#fde8c8,#f9c784);display:flex;align-items:center;justify-content:center;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FF9800" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                </div>
+                <span style="font-size:13px;font-weight:600;">Videos</span>
+            </div>
+            <div onclick="triggerGrpFile('document')" style="display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 10px;border:1.5px solid var(--border);border-radius:18px;cursor:pointer;background:#f7fafa;">
+                <div style="width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#dbeafe,#93c5fd);display:flex;align-items:center;justify-content:center;">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2196F3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <span style="font-size:13px;font-weight:600;">Docs</span>
+            </div>
+        </div>
+        <input type="file" id="grpFileInput" style="display:none">
+        <button onclick="closeGrpFileModal()" style="width:100%;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;cursor:pointer;font-size:14px;">Cancel</button>
+    </div>
+</div>
+
+<!-- Members panel -->
+<div id="members-panel">
+    <div class="members-sheet">
+        <div class="members-handle"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <h3 style="font-size:17px;font-weight:700;color:var(--primary);margin:0;">Group Members</h3>
+            <button id="addMemberBtn" onclick="openAddMemberModal()" style="display:none;align-items:center;gap:6px;background:linear-gradient(135deg,#0E4950,#1a6b75);color:white;border:none;padding:8px 14px;border-radius:20px;font-size:13px;font-weight:600;cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add
+            </button>
+        </div>
+        <div id="membersList" style="display:flex;flex-direction:column;gap:0;"></div>
+    </div>
+</div>
+
+<!-- Add Member modal -->
+<div id="addMemberModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,30,30,0.55);z-index:3000;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:28px 28px 0 0;padding:24px 20px calc(28px + env(safe-area-inset-bottom,0px));width:100%;max-height:75vh;display:flex;flex-direction:column;">
+        <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 18px;"></div>
+        <h3 style="font-size:17px;font-weight:700;color:var(--primary);margin-bottom:4px;">Add Members</h3>
+        <p style="font-size:13px;color:#8aa3a5;margin-bottom:16px;">Select contacts to add to this group.</p>
+        <div id="addMemberPicker" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:16px;"></div>
+        <div style="display:flex;gap:10px;flex-shrink:0;">
+            <button onclick="closeAddMemberModal()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;font-size:14px;cursor:pointer;">Cancel</button>
+            <button id="addMemberConfirmBtn" onclick="submitAddMembers()" style="flex:2;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#0E4950,#1a6b75);color:white;font-weight:700;font-size:14px;cursor:pointer;">Add</button>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Member confirmation modal -->
+<div id="removeMemberModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,30,30,0.55);backdrop-filter:blur(6px);z-index:4000;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 22px calc(32px + env(safe-area-inset-bottom,0px));width:100%;">
+        <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 20px;"></div>
+        <p id="removeMemberLabel" style="font-size:16px;font-weight:600;color:#1a2e2f;text-align:center;margin-bottom:6px;"></p>
+        <p style="font-size:13px;color:#8aa3a5;text-align:center;margin-bottom:24px;">This person will be removed from the group and can no longer see messages.</p>
+        <div style="display:flex;gap:10px;">
+            <button onclick="closeRemoveMemberModal()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Cancel</button>
+            <button id="removeMemberConfirmBtn" style="flex:2;padding:13px;border:none;border-radius:12px;background:#e53935;color:white;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">Remove</button>
+        </div>
+    </div>
+</div>
+
+<!-- Context menu -->
+<div id="grp-context-menu">
+    <div class="grp-ctx-item" id="grpCtxReact">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2ec4b6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+        React
+    </div>
+    <div class="grp-ctx-item" id="grpCtxCopy">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E4950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copy
+    </div>
+    <div class="grp-ctx-item" id="grpCtxDelete" style="color:#e53935;display:none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        Delete
+    </div>
+</div>
+
+<!-- Emoji reaction bar -->
+<div id="grp-emoji-bar">
+    <button class="grp-emoji-btn" data-emoji="👍">👍</button>
+    <button class="grp-emoji-btn" data-emoji="❤️">❤️</button>
+    <button class="grp-emoji-btn" data-emoji="😂">😂</button>
+    <button class="grp-emoji-btn" data-emoji="😮">😮</button>
+    <button class="grp-emoji-btn" data-emoji="😢">😢</button>
+    <button class="grp-emoji-btn" data-emoji="🔥">🔥</button>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+    const myPhone = {{ phone|tojson }};
+    const groupId = {{ group_id }};
+    const groupName = {{ group_name|tojson }};
+
+    const grpChat = document.getElementById('grp-chat');
+    const grpInput = document.getElementById('grp-message');
+    const grpTyping = document.getElementById('grp-typing');
+    const grpFileInput = document.getElementById('grpFileInput');
+    let isConnected = false;
+    let typingTimer;
+    let groupMembers = [];
+
+    // ── Helpers ──────────────────────────────────────────────────
+    function goBack() { window.history.back(); }
+
+    function showGrpToast(msg, dur=3000) {
+        const t = document.createElement('div');
+        t.className = 'grp-toast'; t.textContent = msg;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), dur);
+    }
+
+    function formatTime(ts) {
+        const d = ts ? new Date(ts) : new Date();
+        return d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    }
+
+    function formatFileSize(b) {
+        if (!b) return '';
+        if (b < 1024) return b + ' B';
+        if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+        return (b/(1024*1024)).toFixed(1) + ' MB';
+    }
+
+    function resizeTextarea() {
+        grpInput.style.height = 'auto';
+        grpInput.style.height = Math.min(grpInput.scrollHeight, 120) + 'px';
+    }
+    grpInput.addEventListener('input', resizeTextarea);
+
+    // ── Members panel ─────────────────────────────────────────────
+    let isAdmin = false;
+
+    function loadGroupInfo() {
+        fetch('/api/group_info?group_id=' + groupId + '&user_phone=' + encodeURIComponent(myPhone))
+        .then(r => r.json())
+        .then(info => {
+            groupMembers = info.members || [];
+            document.getElementById('grpMeta').textContent = groupMembers.length + ' member' + (groupMembers.length !== 1 ? 's' : '');
+
+            // Check if current user is admin
+            const me = groupMembers.find(m => String(m.phone) === String(myPhone));
+            isAdmin = me && me.role === 'admin';
+
+            const list = document.getElementById('membersList');
+            const frag = document.createDocumentFragment();
+            groupMembers.forEach(m => {
+                const isMe = String(m.phone) === String(myPhone);
+                const displayName = m.name || m.phone || 'Unknown';
+                const initial = displayName[0].toUpperCase();
+                const row = document.createElement('div');
+                row.dataset.memberPhone = m.phone;
+                row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f4f4;';
+                row.innerHTML = `
+                  <div style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#0E4950,#2ec4b6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:16px;flex-shrink:0;">${initial}</div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-weight:600;color:#1a2e2f;font-size:14px;">${displayName}${isMe ? ' <span style="color:#8aa3a5;font-weight:400;">(You)</span>' : ''}</div>
+                    <div style="color:#8aa3a5;font-size:11px;">${m.phone}</div>
+                  </div>
+                  ${m.role === 'admin' ? '<span style="font-size:10px;font-weight:700;color:#2ec4b6;background:#f0faf9;padding:3px 8px;border-radius:8px;flex-shrink:0;">Admin</span>' : ''}
+                  ${isAdmin && !isMe ? `<button data-phone="${m.phone}" data-name="${displayName.replace(/"/g,'&quot;')}" class="remove-member-btn" style="flex-shrink:0;background:none;border:1.5px solid #f44336;color:#f44336;border-radius:8px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;">Remove</button>` : ''}
+                `;
+                frag.appendChild(row);
+            });
+
+            list.innerHTML = '';
+            list.appendChild(frag);
+
+            // Wire remove buttons
+            list.querySelectorAll('.remove-member-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const phone = this.dataset.phone;
+                    const name  = this.dataset.name;
+                    openRemoveMemberModal(phone, name);
+                });
+            });
+
+            // Show Add Member button for admins
+            const addBtn = document.getElementById('addMemberBtn');
+            if (addBtn) addBtn.style.display = isAdmin ? 'flex' : 'none';
+        })
+        .catch(() => {
+            document.getElementById('grpMeta').textContent = 'Members';
+        });
+    }
+
+    // ── Remove Member ─────────────────────────────────────────────
+    let _removeTargetPhone = null;
+
+    function openRemoveMemberModal(phone, name) {
+        _removeTargetPhone = phone;
+        document.getElementById('removeMemberLabel').textContent = 'Remove ' + name + ' from group?';
+        document.getElementById('removeMemberModal').style.display = 'flex';
+    }
+
+    function closeRemoveMemberModal() {
+        document.getElementById('removeMemberModal').style.display = 'none';
+        _removeTargetPhone = null;
+    }
+
+    document.getElementById('removeMemberModal').addEventListener('click', function(e) {
+        if (e.target === this) closeRemoveMemberModal();
+    });
+
+    document.getElementById('removeMemberConfirmBtn').addEventListener('click', async function() {
+        if (!_removeTargetPhone) return;
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Removing…';
+        try {
+            const res = await fetch('/api/remove_group_member', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ group_id: groupId, removed_by: String(myPhone), target_phone: _removeTargetPhone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeRemoveMemberModal();
+                loadGroupInfo(); // refresh member list
+            } else {
+                alert(data.error || 'Could not remove member.');
+                btn.disabled = false;
+                btn.textContent = 'Remove';
+            }
+        } catch(e) {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Remove';
+        }
+    });
+
+    // ── Add Member ────────────────────────────────────────────────
+    function openAddMemberModal() {
+        // Load contacts and show picker
+        fetch('/api/contacts?phone=' + encodeURIComponent(myPhone))
+        .then(r => r.json())
+        .then(contacts => {
+            const existingPhones = new Set(groupMembers.map(m => String(m.phone)));
+            const eligible = contacts.filter(c => !existingPhones.has(String(c.contact_phone)));
+
+            const modal = document.getElementById('addMemberModal');
+            const picker = document.getElementById('addMemberPicker');
+            picker.innerHTML = '';
+
+            if (eligible.length === 0) {
+                picker.innerHTML = '<p style="color:#8aa3a5;font-size:13px;text-align:center;padding:20px 0;">All your contacts are already in this group.</p>';
+            } else {
+                eligible.forEach(c => {
+                    const name = c.contact_name || c.contact_phone;
+                    const initial = name[0].toUpperCase();
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:12px;border:1.5px solid #d8e8e8;cursor:pointer;background:#f8fafa;transition:all 0.15s;';
+                    row.dataset.phone = c.contact_phone;
+                    row.dataset.selected = 'false';
+                    row.innerHTML = `
+                      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0E4950,#2ec4b6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;">${initial}</div>
+                      <div style="flex:1;min-width:0;">
+                        <div style="font-weight:600;color:#1a2e2f;font-size:14px;">${name}</div>
+                        <div style="color:#8aa3a5;font-size:11px;">${c.contact_phone}</div>
+                      </div>
+                      <div class="add-check" style="width:22px;height:22px;border-radius:50%;border:2px solid #d8e8e8;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.15s;"></div>
+                    `;
+                    row.addEventListener('click', () => {
+                        const sel = row.dataset.selected === 'true';
+                        row.dataset.selected = sel ? 'false' : 'true';
+                        const check = row.querySelector('.add-check');
+                        if (!sel) {
+                            row.style.borderColor = '#2ec4b6';
+                            row.style.background = '#f0faf9';
+                            check.style.background = '#2ec4b6';
+                            check.style.borderColor = '#2ec4b6';
+                            check.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
+                        } else {
+                            row.style.borderColor = '#d8e8e8';
+                            row.style.background = '#f8fafa';
+                            check.style.background = 'transparent';
+                            check.style.borderColor = '#d8e8e8';
+                            check.innerHTML = '';
+                        }
+                    });
+                    picker.appendChild(row);
+                });
+            }
+            modal.style.display = 'flex';
+        })
+        .catch(() => showGrpToast('Could not load contacts'));
+    }
+
+    function closeAddMemberModal() {
+        document.getElementById('addMemberModal').style.display = 'none';
+    }
+
+    function submitAddMembers() {
+        const selected = [...document.querySelectorAll('#addMemberPicker [data-selected="true"]')]
+            .map(r => r.dataset.phone);
+        if (selected.length === 0) { showGrpToast('Select at least one person'); return; }
+
+        const btn = document.getElementById('addMemberConfirmBtn');
+        btn.disabled = true; btn.textContent = 'Adding…';
+
+        fetch('/api/add_group_members', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({group_id: groupId, added_by: String(myPhone), members: selected})
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.disabled = false; btn.textContent = 'Add';
+            if (data.success) {
+                closeAddMemberModal();
+                closeMembersPanel();
+                loadGroupInfo();
+                showGrpToast('Members added!');
+            } else {
+                showGrpToast(data.error || 'Failed to add members');
+            }
+        })
+        .catch(() => { btn.disabled = false; btn.textContent = 'Add'; showGrpToast('Network error'); });
+    }
+
+    document.getElementById('addMemberModal').addEventListener('click', function(e) {
+        if (e.target === this) closeAddMemberModal();
+    });
+
+    function openMembersPanel() {
+        document.getElementById('members-panel').style.display = 'flex';
+    }
+    function closeMembersPanel() {
+        document.getElementById('members-panel').style.display = 'none';
+    }
+    document.getElementById('members-panel').addEventListener('click', function(e) {
+        if (e.target === this) closeMembersPanel();
+    });
+
+    // ── Render messages ───────────────────────────────────────────
+    function getSenderName(senderPhone) {
+        if (String(senderPhone) === String(myPhone)) return 'You';
+        const m = groupMembers.find(x => x.phone === String(senderPhone));
+        return m ? m.name : senderPhone;
+    }
+
+    function createBubble(msg) {
+        const isSent = String(msg.sender) === String(myPhone);
+        const group = document.createElement('div');
+        group.className = 'grp-msg-group ' + (isSent ? 'grp-sent-group' : 'grp-recv-group');
+
+        if (!isSent) {
+            const label = document.createElement('div');
+            label.className = 'grp-sender-label';
+            label.textContent = getSenderName(msg.sender);
+            group.appendChild(label);
+        }
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble ' + (isSent ? 'sent' : 'received');
+        bubble.dataset.msgType = 'text';
+        if (msg.id) bubble.dataset.messageId = msg.id;
+        else bubble.dataset.tempId = msg.temp_id || ('temp_' + Date.now());
+
+        if (msg.message_type === 'image' && msg.file_path) {
+            const img = document.createElement('img');
+            img.src = '/uploads/' + msg.file_path;
+            img.alt = '';
+            img.loading = 'lazy';
+            bubble.className += ' media-message';
+            const preview = document.createElement('div');
+            preview.className = 'media-preview';
+            preview.appendChild(img);
+            preview.onclick = () => openGrpImgViewer('/uploads/' + msg.file_path);
+            bubble.appendChild(preview);
+        } else if (msg.message_type === 'video' && msg.file_path) {
+            const fm = document.createElement('div');
+            fm.className = 'file-message';
+            fm.innerHTML = `<div class="file-icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;margin-bottom:4px;">${msg.file_name||'Video'}</div><div style="font-size:11px;color:#666;">${formatFileSize(msg.file_size)}</div></div><button class="file-dl-btn" onclick="window.open('/uploads/${msg.file_path}')">Open</button>`;
+            bubble.appendChild(fm);
+        } else if (msg.message_type !== 'text' && msg.file_path) {
+            const fm = document.createElement('div');
+            fm.className = 'file-message';
+            fm.innerHTML = `<div class="file-icon-box"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div><div style="flex:1;min-width:0;"><div style="font-weight:600;font-size:13px;margin-bottom:4px;">${msg.file_name||'File'}</div><div style="font-size:11px;color:#666;">${formatFileSize(msg.file_size)}</div></div><button class="file-dl-btn" onclick="window.location='/uploads/${msg.file_path}'">Download</button>`;
+            bubble.appendChild(fm);
+        } else {
+            const txt = document.createElement('div');
+            txt.textContent = msg.message;
+            bubble.appendChild(txt);
+        }
+
+        const time = document.createElement('div');
+        time.className = 'msg-time';
+        time.textContent = formatTime(msg.timestamp);
+        bubble.appendChild(time);
+
+        // Render persisted reactions (loaded from DB)
+        if (msg.reactions && msg.reactions.length > 0) {
+            renderGroupReactions(bubble, msg.reactions);
+        }
+
+        group.appendChild(bubble);
+        return group;
+    }
+
+    function scrollGrpToBottom(smooth = false) {
+        requestAnimationFrame(() => {
+            grpChat.scrollTop = grpChat.scrollHeight;
+        });
+    }
+
+    function appendMessage(msg, scroll=true) {
+        const indicator = document.getElementById('grpLoadingIndicator');
+        if (indicator) indicator.remove();
+        const el = createBubble(msg);
+        grpChat.appendChild(el);
+        attachBubbleEvents(el);
+        if (scroll) scrollGrpToBottom(true);
+    }
+
+    // ── Load messages ─────────────────────────────────────────────
+    function loadMessages() {
+        const textUrl  = '/api/group_messages?group_id=' + groupId + '&user_phone=' + encodeURIComponent(myPhone) + '&page=1&limit=50';
+        const voiceUrl = '/api/voice/history?group_id=' + groupId + '&user_phone=' + encodeURIComponent(myPhone);
+
+        Promise.all([
+            fetch(textUrl).then(r => r.json()).catch(() => []),
+            fetch(voiceUrl).then(r => r.json()).catch(() => [])
+        ]).then(([textMsgs, voiceMsgs]) => {
+            voiceMsgs.forEach(m => { m.message_type = 'voice'; });
+            const all = [...textMsgs, ...voiceMsgs].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const frag = document.createDocumentFragment();
+            all.forEach(m => {
+                const el = m.message_type === 'voice' ? GVM_renderBubble(m) : createBubble(m);
+                attachBubbleEvents(el);
+                frag.appendChild(el);
+            });
+            grpChat.innerHTML = '';
+            grpChat.appendChild(frag);
+            grpChat.querySelectorAll('.message-appear').forEach(el => el.classList.remove('message-appear'));
+            scrollGrpToBottom(false);
+        }).catch(() => showGrpToast('Failed to load messages'));
+    }
+
+    // ── Send message ──────────────────────────────────────────────
+    function sendGroupMessage() {
+        const msg = grpInput.value.trim();
+        if (!msg) return;
+
+        const tempId = 'temp_' + Date.now();
+        appendMessage({ sender: myPhone, message: msg, message_type: 'text', temp_id: tempId });
+        grpInput.value = '';
+        grpInput.style.height = 'auto';
+
+        if (!isConnected) {
+            showGrpToast('No connection — message will send automatically');
+            groupOfflineQueue.push({ tempId, msg });
+            return;
+        }
+        socket.emit('send_group_message', { group_id: groupId, sender: String(myPhone), message: msg, temp_id: tempId });
+    }
+
+    // Queued messages are flushed the instant the socket reconnects
+    // (see the 'connect' handler), instead of being retried for a fixed
+    // window and silently dropped if the network stays down.
+    const groupOfflineQueue = [];
+    function flushGroupOfflineQueue() {
+        while (groupOfflineQueue.length) {
+            const { tempId, msg } = groupOfflineQueue.shift();
+            socket.emit('send_group_message', { group_id: groupId, sender: String(myPhone), message: msg, temp_id: tempId });
+        }
+    }
+
+    grpInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendGroupMessage(); }
+    });
+
+    grpInput.addEventListener('input', function() {
+        if (!isConnected) return;
+        socket.emit('group_typing', { group_id: groupId, user: String(myPhone) });
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => socket.emit('group_stop_typing', { group_id: groupId, user: String(myPhone) }), 2000);
+    });
+
+    // ── File upload ───────────────────────────────────────────────
+    function openGrpFileModal() { document.getElementById('grpFileModal').style.display = 'flex'; }
+    function closeGrpFileModal() { document.getElementById('grpFileModal').style.display = 'none'; grpFileInput.value = ''; }
+
+    function triggerGrpFile(type) {
+        const accepts = { image:'image/*', video:'video/*', document:'*/*' };
+        grpFileInput.accept = accepts[type] || '*/*';
+        grpFileInput.onchange = function() {
+            if (this.files.length > 0) uploadGroupFile(this.files[0], type);
+        };
+        grpFileInput.click();
+        closeGrpFileModal();
+    }
+
+    // Tracks temp_ids for in-flight file uploads so socket won't double-render them
+    const pendingFileTempIds = new Set();
+
+    function uploadGroupFile(file, fileType) {
+        if (file.size > 16*1024*1024) { showGrpToast('File too large (max 16MB)'); return; }
+
+        // Create and track a temp bubble element directly
+        const tempId = 'temp_' + Date.now();
+        pendingFileTempIds.add(tempId);
+        const tempEl = createBubble({ sender: myPhone, message: 'Uploading ' + file.name + '…', message_type: 'text', temp_id: tempId });
+        grpChat.appendChild(tempEl);
+        scrollGrpToBottom(false);
+
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('sender', String(myPhone));
+        fd.append('receiver', 'group_' + groupId);
+
+        fetch('/upload_file', { method:'POST', body:fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the temp bubble group element directly
+                if (tempEl.parentNode) tempEl.remove();
+                const newTempId = 'temp_' + Date.now();
+                pendingFileTempIds.add(newTempId);
+                const filePayload = {
+                    group_id: groupId, sender: String(myPhone),
+                    message: file.name, message_type: data.file_type,
+                    file_path: data.file_path, file_name: data.file_name,
+                    file_size: data.file_size, temp_id: newTempId
+                };
+                if (!isConnected) {
+                    showGrpToast('Reconnecting… file will send shortly');
+                    const retry = setInterval(() => {
+                        if (isConnected) {
+                            clearInterval(retry);
+                            socket.emit('send_group_message', filePayload);
+                        }
+                    }, 500);
+                    setTimeout(() => { clearInterval(retry); pendingFileTempIds.delete(newTempId); showGrpToast('Could not send file. Please try again.'); }, 15000);
+                    return;
+                }
+                socket.emit('send_group_message', filePayload);
+            } else {
+                if (tempEl.parentNode) tempEl.remove();
+                pendingFileTempIds.delete(tempId);
+                showGrpToast('Upload failed: ' + (data.error || 'Unknown error'));
+            }
+        })
+        .catch(() => {
+            if (tempEl.parentNode) tempEl.remove();
+            pendingFileTempIds.delete(tempId);
+            showGrpToast('Upload error. Please try again.');
+        });
+    }
+
+    // ── Image viewer ──────────────────────────────────────────────
+    function openGrpImgViewer(src) {
+        const viewer = document.getElementById('grp-img-viewer');
+        document.getElementById('grp-img-viewer-img').src = src;
+        viewer.classList.add('open');
+    }
+    function closeGrpImgViewer() {
+        const viewer = document.getElementById('grp-img-viewer');
+        viewer.classList.remove('open');
+        document.getElementById('grp-img-viewer-img').src = '';
+    }
+    // Prevent close when tapping the image itself
+    document.getElementById('grp-img-viewer-img').addEventListener('click', e => e.stopPropagation());
+
+    document.getElementById('grpFileModal').addEventListener('click', function(e) {
+        if (e.target === this) closeGrpFileModal();
+    });
+
+    // ── Socket ────────────────────────────────────────────────────
+    const socket = io({
+        reconnection:true, reconnectionDelay:1000,
+        reconnectionDelayMax:5000, reconnectionAttempts:Infinity,
+        timeout:20000, transports:['websocket','polling']
+    });
+
+    socket.on('connect', () => {
+        isConnected = true;
+        const banner = document.getElementById('grpConnectingBanner');
+        if (banner) banner.style.display = 'none';
+        socket.emit('join_group', { group_id: groupId, user: String(myPhone) });
+        socket.emit('register_user', { phone: String(myPhone) });
+        flushGroupOfflineQueue();
+    });
+
+    socket.on('disconnect', () => {
+        isConnected = false;
+        const banner = document.getElementById('grpConnectingBanner');
+        if (banner) banner.style.display = 'block';
+    });
+
+    // Live notifications for messages anywhere in the app. Suppress it
+    // for this exact group since the message will already appear
+    // directly in the chat via 'receive_group_message'.
+    socket.on('new_message_notification', data => {
+        const isThisGroup = data.type === 'group' && String(data.group_id) === String(groupId);
+        if (window.exomniaNotify) window.exomniaNotify(data, isThisGroup);
+    });
+
+    socket.on('receive_group_message', function(data) {
+        if (String(data.group_id) !== String(groupId)) return;
+
+        if (String(data.sender) === String(myPhone) && data.temp_id) {
+            // Own message confirmed — remove from pending set and render the real bubble
+            pendingFileTempIds.delete(data.temp_id);
+            // Update temp text bubble ID if present (text messages)
+            const t = document.querySelector('[data-temp-id="' + data.temp_id + '"]');
+            if (t) { t.dataset.messageId = data.id; delete t.dataset.tempId; return; }
+            // For file messages the temp element was already removed; render the real bubble now
+            appendMessage(data);
+            return;
+        }
+
+        appendMessage(data);
+    });
+
+    socket.on('group_typing', function(data) {
+        if (String(data.group_id) !== String(groupId) || String(data.user) === String(myPhone)) return;
+        const name = getSenderName(data.user);
+        grpTyping.textContent = name + ' is typing…';
+    });
+
+    socket.on('group_stop_typing', function(data) {
+        if (String(data.group_id) !== String(groupId)) return;
+        grpTyping.textContent = '';
+    });
+
+    // ── Keyboard / visualViewport ─────────────────────────────────
+    if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', () => {
+            const offset = Math.max(0, window.innerHeight - window.visualViewport.height);
+            document.getElementById('grp-message-box').style.paddingBottom = 'calc(16px + env(safe-area-inset-bottom,0px) + ' + offset + 'px)';
+        });
+    }
+    grpInput.addEventListener('focus', () => setTimeout(() => { scrollGrpToBottom(false); }, 350));
+
+    // ── Context menu & reactions ──────────────────────────────────
+    let ctxTargetBubble = null;
+    let ctxTargetMsg = null;
+    let suppressNextClick = false;
+    const ctxMenu = document.getElementById('grp-context-menu');
+    const emojiBar = document.getElementById('grp-emoji-bar');
+
+    function closeCtx() {
+        ctxMenu.style.display = 'none';
+        emojiBar.style.display = 'none';
+        ctxTargetBubble = null;
+        ctxTargetMsg = null;
+    }
+
+    function positionPopup(el, x, y) {
+        el.style.display = 'flex';
+        const r = el.getBoundingClientRect();
+        const frameRect = document.body.getBoundingClientRect();
+        const vw = frameRect.width;
+        const vh = frameRect.height;
+        let left = (x - frameRect.left), top = (y - frameRect.top) + 10;
+        if (left + r.width > vw - 8) left = vw - r.width - 8;
+        if (top + r.height > vh - 8) top = (y - frameRect.top) - r.height - 10;
+        el.style.left = Math.max(8, left) + 'px';
+        el.style.top = Math.max(8, top) + 'px';
+    }
+
+    function openCtxMenu(el, msgId, msgText, clientX, clientY) {
+        ctxTargetBubble = el;
+        ctxTargetMsg = { id: msgId, text: msgText };
+        emojiBar.style.display = 'none';
+
+        // Determine if this is a voice message and if it's the user's own
+        const isVoice = el.classList.contains('gvm-react-wrap') ||
+                        el.classList.contains('gvm-bubble') ||
+                        !!el.querySelector('.gvm-bubble');
+        const senderWrap = el.classList.contains('gvm-react-wrap') ? el : el.closest('.gvm-react-wrap');
+        const isOwn = senderWrap && senderWrap.dataset.sender
+            ? String(senderWrap.dataset.sender) === String(myPhone)
+            : (el.classList.contains('gvm-out') || !!el.querySelector('.gvm-out'));
+
+        const grpCtxCopy = document.getElementById('grpCtxCopy');
+        const grpCtxDelete = document.getElementById('grpCtxDelete');
+        if (grpCtxCopy) grpCtxCopy.style.display = isVoice ? 'none' : '';
+        if (grpCtxDelete) grpCtxDelete.style.display = (isVoice && isOwn) ? '' : 'none';
+
+        ctxMenu.style.display = 'block';
+        positionPopup(ctxMenu, clientX, clientY);
+    }
+
+    // Long-press & right-click on bubbles
+    let longPressTimer = null;
+    let longPressActive = false;
+
+    // Document-level touch handlers (capture phase) — identical to the proven DM chat approach.
+    // Using document-level capture means stopPropagation on child elements (waveform, play
+    // button inside the voice bubble) cannot block the long-press from firing on any message.
+    document.addEventListener('touchstart', function(e) {
+        const wrap = e.target.closest('.gvm-react-wrap, .bubble');
+        if (!wrap) return;
+        const msgId = wrap.dataset.messageId ||
+            (wrap.parentElement && wrap.parentElement.dataset.messageId) || null;
+        if (!msgId) return;
+        longPressActive = true;
+        const savedTouches = { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
+        longPressTimer = setTimeout(() => {
+            if (!longPressActive) return;
+            suppressNextClick = true;
+            const el = wrap.classList.contains('gvm-react-wrap') ? wrap :
+                (wrap.closest('.gvm-react-wrap') || wrap);
+            const msgText = el.classList.contains('gvm-react-wrap') ? '🎤 Voice message' :
+                (el.querySelector('div:not(.msg-time):not(.grp-msg-reactions)')?.textContent || '');
+            openCtxMenu(el, msgId, msgText, savedTouches.clientX, savedTouches.clientY);
+            longPressActive = false;
+        }, 500);
+    }, { passive: true, capture: true });
+
+    document.addEventListener('touchend', function() {
+        clearTimeout(longPressTimer);
+        longPressActive = false;
+    }, { passive: true, capture: true });
+
+    document.addEventListener('touchmove', function() {
+        clearTimeout(longPressTimer);
+        longPressActive = false;
+    }, { passive: true, capture: true });
+
+    function attachBubbleEvents(el) {
+        // el may be a gvm-react-wrap (new), old-style outer div, or a .bubble
+        const gvmWrap = el.classList.contains('gvm-react-wrap') ? el : null;
+        const bubble = gvmWrap ? (el.querySelector('.gvm-bubble') || el)
+            : el.classList.contains('gvm-bubble') ? el
+            : el.querySelector('.gvm-bubble') || el.querySelector('.bubble') || el;
+
+        const getMsgId = () => el.dataset.messageId || bubble.dataset.messageId || null;
+        const getMsgText = () => {
+            if (bubble.classList.contains('gvm-bubble')) return '🎤 Voice message';
+            const txt = bubble.querySelector('div:not(.msg-time):not(.grp-msg-reactions)');
+            return txt ? txt.textContent : '';
+        };
+
+        // Attach events to the gvm-bubble (audio player) or text .bubble
+        const target = bubble.classList.contains('gvm-bubble') ? bubble : (el.querySelector('.bubble') || el);
+
+        target.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            const id = getMsgId();
+            if (id) openCtxMenu(el, id, getMsgText(), e.clientX, e.clientY);
+        });
+
+        // Long-press is handled by the document-level touchstart listener above,
+        // which uses capture:true and fires before any child stopPropagation.
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!ctxMenu.contains(e.target) && !emojiBar.contains(e.target)) closeCtx();
+    });
+
+    // Copy action
+    document.getElementById('grpCtxCopy').addEventListener('click', function() {
+        if (suppressNextClick) { suppressNextClick = false; return; }
+        if (!ctxTargetMsg) return;
+        const text = ctxTargetMsg.text;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => showGrpToast('Copied!'));
+        } else {
+            const ta = document.createElement('textarea');
+            ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showGrpToast('Copied!');
+        }
+        closeCtx();
+    });
+
+    // Delete voice message action
+    document.getElementById('grpCtxDelete').addEventListener('click', function() {
+        if (suppressNextClick) { suppressNextClick = false; return; }
+        if (!ctxTargetMsg || !ctxTargetMsg.id) { closeCtx(); return; }
+        const msgId = ctxTargetMsg.id;
+        const el = ctxTargetBubble;
+        closeCtx();
+        // Optimistically remove from DOM
+        if (el) {
+            const wrapper = el.closest('.message-group') || el;
+            wrapper.remove();
+        }
+        fetch('/api/voice/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ id: msgId, user_phone: String(myPhone) })
+        }).then(r => r.json()).then(data => {
+            if (!data.success) showGrpToast('Could not delete message.');
+        }).catch(() => showGrpToast('Could not delete message.'));
+    });
+
+    // React action — show emoji bar
+    document.getElementById('grpCtxReact').addEventListener('click', function() {
+        if (!ctxTargetMsg) return;
+        suppressNextClick = false; // emoji bar is safe — ghost-click window is closed
+        const rect = ctxMenu.getBoundingClientRect();
+        ctxMenu.style.display = 'none';
+        emojiBar.style.display = 'flex';
+        positionPopup(emojiBar, rect.left, rect.top);
+    });
+
+    // Emoji buttons
+    document.querySelectorAll('.grp-emoji-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (!ctxTargetMsg || !ctxTargetMsg.id) { closeCtx(); return; }
+            const msgId    = ctxTargetMsg.id;
+            const emoji    = this.dataset.emoji;
+            const targetEl = ctxTargetBubble; // inner .bubble or gvm-react-wrap
+            closeCtx();
+
+            // Immediate local update using renderGroupReactions so the UI responds
+            // in the same frame — no waiting for the socket round-trip.
+            if (targetEl) {
+                const existing = [];
+                targetEl.querySelectorAll('.grp-reaction-pill').forEach(pill => {
+                    const e = pill.querySelector('span:first-child')?.textContent;
+                    if (!e) return;
+                    // Read real reactors stored on the pill, fall back to count-based placeholder
+                    let reactors;
+                    try { reactors = JSON.parse(pill.dataset.reactors || '[]'); } catch { reactors = []; }
+                    if (reactors.length) {
+                        reactors.forEach(p => existing.push({ emoji: e, user_phone: p }));
+                    } else {
+                        const n = parseInt(pill.querySelector('.grp-r-count')?.textContent || '1');
+                        for (let i = 0; i < n; i++) existing.push({ emoji: e, user_phone: '__unknown__' });
+                    }
+                });
+                const alreadyReacted = existing.some(r => r.emoji === emoji && r.user_phone === String(myPhone));
+                let synthetic;
+                if (alreadyReacted) {
+                    let removed = false;
+                    synthetic = existing.filter(r => {
+                        if (!removed && r.emoji === emoji && r.user_phone === String(myPhone)) { removed = true; return false; }
+                        return true;
+                    });
+                } else {
+                    synthetic = [...existing, { emoji, user_phone: String(myPhone) }];
+                }
+                renderGroupReactions(targetEl, synthetic);
+            }
+
+            // Then fire the socket to persist and broadcast to others
+            socket.emit('add_group_reaction', {
+                message_id: msgId,
+                emoji,
+                user_phone: String(myPhone),
+                group_id: groupId
+            });
+        });
+    });
+
+    // Render reactions on a bubble (el may be gvm-react-wrap, text bubble, or old-style outer)
+    function renderGroupReactions(el, reactions) {
+        let container = el.querySelector('.grp-msg-reactions');
+        if (container) container.remove();
+        if (!reactions || reactions.length === 0) return;
+        const counts = {};
+        reactions.forEach(r => { counts[r.emoji] = (counts[r.emoji] || 0) + 1; });
+        container = document.createElement('div');
+        container.className = 'grp-msg-reactions';
+        Object.entries(counts).forEach(([emoji, count]) => {
+            const pill = document.createElement('div');
+            pill.className = 'grp-reaction-pill';
+            // Store which users reacted so optimistic toggle works correctly
+            const reactors = reactions.filter(r => r.emoji === emoji).map(r => r.user_phone);
+            pill.dataset.reactors = JSON.stringify(reactors);
+            pill.innerHTML = `<span>${emoji}</span><span class="grp-r-count">${count}</span>`;
+            pill.addEventListener('click', function() {
+                const msgId = el.dataset.messageId;
+                if (!msgId) return;
+                socket.emit('add_group_reaction', {
+                    message_id: msgId, emoji, user_phone: String(myPhone), group_id: groupId
+                });
+            });
+            container.appendChild(pill);
+        });
+        // For gvm-react-wrap: append below the audio bubble
+        if (el.classList.contains('gvm-react-wrap')) {
+            el.appendChild(container);
+        } else {
+            // text bubble: insert before time stamp
+            const anchor = el.querySelector('.msg-time') || el.querySelector('.gvm-meta') || null;
+            if (anchor) el.insertBefore(container, anchor);
+            else el.appendChild(container);
+        }
+    }
+
+    // Socket: receive group reaction updates
+    socket.on('group_reaction_updated', function(data) {
+        if (String(data.group_id) !== String(groupId)) return;
+        const mid = String(data.message_id);
+        // Use msg-type to distinguish text vs voice IDs (they can collide across tables)
+        const isVoiceReaction = data.is_voice === true;
+        const selector = isVoiceReaction
+            ? '[data-msg-type="voice"][data-message-id="' + mid + '"]'
+            : '[data-message-id="' + mid + '"]:not([data-msg-type="voice"])';
+        const bubble = document.querySelector(selector)
+            || document.querySelector('[data-message-id="' + mid + '"]');
+        if (bubble) renderGroupReactions(bubble, data.reactions);
+    });
+
+    // ── Init ──────────────────────────────────────────────────────
+    loadGroupInfo();
+
+    // ── GROUP VOICE MESSAGING ─────────────────────────────────────
+    const GVM = (() => {
+        let mediaRecorder=null,audioChunks=[],audioCtx=null,analyser=null,
+            liveSource=null,animFrame=null,startTime=0,timerInterval=null,
+            isRec=false,ampHistory=[];
+        const overlay  = ()=>document.getElementById('grp-vm-overlay');
+        const timerEl  = ()=>document.getElementById('grp-vm-timer');
+        const cvs      = ()=>document.getElementById('grp-vm-canvas');
+        const micBtn   = ()=>document.getElementById('grp-mic-btn');
+
+        function toggle(){ isRec?stopAndSend():start(); }
+
+        async function start(){
+            if(isRec) return;
+            if(!window.MediaRecorder||!navigator.mediaDevices){
+                alert('Voice messages are not supported in this browser. Please use Chrome, Firefox, or Safari 14.1+.');
+                return;
+            }
+            try{
+                const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+                audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+                analyser=audioCtx.createAnalyser(); analyser.fftSize=256;
+                liveSource=audioCtx.createMediaStreamSource(stream); liveSource.connect(analyser);
+                const mime=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']
+                    .find(m=>MediaRecorder.isTypeSupported(m))||'';
+                mediaRecorder=new MediaRecorder(stream,mime?{mimeType:mime}:{});
+                audioChunks=[]; ampHistory=[];
+                mediaRecorder.ondataavailable=e=>{ if(e.data&&e.data.size>0) audioChunks.push(e.data); };
+                mediaRecorder.start(100);
+                isRec=true; startTime=Date.now();
+                overlay().classList.add('active'); micBtn()?.classList.add('grp-vm-rec');
+                timerInterval=setInterval(()=>{
+                    const s=Math.floor((Date.now()-startTime)/1000);
+                    timerEl().textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+                    if(s>=300) stopAndSend();
+                },500);
+                drawLive();
+            }catch(e){ alert('Microphone access required for voice messages.'); }
+        }
+
+        function cancel(){
+            if(!isRec) return;
+            cleanup(); overlay().classList.remove('active'); micBtn()?.classList.remove('grp-vm-rec');
+        }
+
+        function stopAndSend(){
+            if(!isRec) return;
+            const dur=Date.now()-startTime;
+            mediaRecorder.onstop=async()=>{
+                const mt=mediaRecorder.mimeType||'audio/mp4';
+                const ext=mt.includes('ogg')?'ogg':mt.includes('mp4')||mt.includes('aac')?'m4a':'webm';
+                const blob=new Blob(audioChunks,{type:mt||'audio/mp4'});
+                await upload(blob,ext,dur,deriveWave());
+            };
+            // Request final chunk before stopping so blob is complete immediately
+            if(mediaRecorder.state==='recording') mediaRecorder.requestData();
+            mediaRecorder.stop(); cleanup();
+            overlay().classList.remove('active'); micBtn()?.classList.remove('grp-vm-rec');
+        }
+
+        async function upload(blob,ext,durMs,waveform){
+            const tempEl=document.createElement('div');
+            tempEl.className='gvm-temp-marker'; // marker to find this specific upload
+            const tempMsg={id:'gvmtmp_'+Date.now(),sender:String(myPhone),group_id:groupId,
+                file_name:null,duration_ms:durMs,waveform,timestamp:new Date().toISOString(),
+                status:'uploading',message_type:'voice'};
+            const el=renderBubble(tempMsg);
+            el.appendChild(tempEl);
+            grpChat.appendChild(el); scrollGrpToBottom(true);
+            const fd=new FormData();
+            fd.append('audio',blob,'voice.'+ext);
+            fd.append('sender',String(myPhone));
+            fd.append('group_id',groupId);
+            fd.append('duration_ms',durMs);
+            fd.append('waveform',JSON.stringify(waveform));
+            try{
+                const res=await fetch('/api/voice/upload',{method:'POST',body:fd});
+                const data=await res.json();
+                // Don't wireAudio here — socket onVoiceMessage handles it
+                // If socket already confirmed it (fast path), bubble is already wired
+                if(!data.success){ el.remove(); }
+            }catch(e){ el.remove(); }
+        }
+
+        function renderBubble(msg){
+            const isOut=String(msg.sender)===String(myPhone);
+            const wave=msg.waveform&&msg.waveform.length?msg.waveform:Array(40).fill(0.5);
+            const wrap=document.createElement('div');
+            wrap.className='gvm-bubble '+(isOut?'gvm-out':'gvm-in')+(msg.status==='uploading'?' gvm-uploading':'');
+            wrap.dataset.vmId=msg.id||'';
+            wrap.dataset.file=msg.file_name||'';
+            const play=document.createElement('button'); play.className='gvm-play'; play.innerHTML=pi();
+            wrap.appendChild(play);
+            const ww=document.createElement('div'); ww.className='gvm-ww';
+            const waveEl=document.createElement('div'); waveEl.className='gvm-wave';
+            wave.forEach((a)=>{
+                const b=document.createElement('div'); b.className='gvm-bar';
+                b.style.height=Math.max(4,Math.round(a*28))+'px'; waveEl.appendChild(b);
+            });
+            ww.appendChild(waveEl);
+            const meta=document.createElement('div'); meta.className='gvm-meta';
+            const dur=document.createElement('span'); dur.className='gvm-dur';
+            dur.textContent=fmtMs(msg.duration_ms||0); meta.appendChild(dur);
+            ww.appendChild(meta); wrap.appendChild(ww);
+
+            // Wrap in gvm-react-wrap so reactions appear below the audio bubble
+            const outer=document.createElement('div');
+            outer.className='gvm-react-wrap '+(isOut?'gvm-out':'gvm-in');
+            outer.dataset.msgType='voice';
+            if(msg.id){ outer.dataset.messageId=String(msg.id); wrap.dataset.messageId=String(msg.id); }
+            if(msg.sender){ outer.dataset.sender=String(msg.sender); }
+
+            if(!isOut){
+                const lbl=document.createElement('div');
+                lbl.style.cssText='font-size:11px;font-weight:600;color:var(--accent);margin-bottom:3px;';
+                lbl.textContent=getSenderName(msg.sender);
+                outer.appendChild(lbl);
+            }
+            outer.appendChild(wrap);
+            if(msg.file_name&&msg.status!=='uploading') wireAudio(wrap,msg.file_name,msg.duration_ms||0,wave,isOut,msg);
+            // Render reactions loaded from history
+            if(msg.reactions&&msg.reactions.length){
+                const rc=document.createElement('div');
+                rc.className='grp-msg-reactions';
+                const counts={};
+                msg.reactions.forEach(r=>{ counts[r.emoji]=(counts[r.emoji]||0)+1; });
+                Object.entries(counts).forEach(([emoji,count])=>{
+                    const pill=document.createElement('div'); pill.className='grp-reaction-pill';
+                    pill.innerHTML=`<span>${emoji}</span><span class="grp-r-count">${count}</span>`;
+                    rc.appendChild(pill);
+                });
+                outer.appendChild(rc);
+            }
+            // Prevent play button tap from triggering long-press context menu
+            play.addEventListener('touchstart', e => e.stopPropagation(), {passive:true});
+            play.addEventListener('touchend',   e => e.stopPropagation(), {passive:true});
+            return outer;
+        }
+
+        function wireAudio(wrap,fileName,durMs,wave,isOut,msg){
+            const audio=new Audio('/api/voice/file/'+fileName);
+            audio.preload='metadata';
+            let playing=false;
+            const bars=wrap.querySelectorAll('.gvm-bar');
+            const durEl=wrap.querySelector('.gvm-dur');
+            const play=wrap.querySelector('.gvm-play');
+            const waveEl=wrap.querySelector('.gvm-wave');
+            waveEl.addEventListener('click',e=>{
+                const r=waveEl.getBoundingClientRect();
+                const ratio=(e.clientX-r.left)/r.width;
+                if(audio.duration){ audio.currentTime=ratio*audio.duration; upd(); }
+            });
+            waveEl.addEventListener('touchstart', e=>e.stopPropagation(), {passive:true});
+            waveEl.addEventListener('touchend',   e=>e.stopPropagation(), {passive:true});
+            audio.addEventListener('timeupdate',upd);
+            audio.addEventListener('ended',()=>{
+                playing=false; play.innerHTML=pi();
+                bars.forEach(b=>b.classList.remove('gvm-p'));
+                durEl.textContent=fmtMs(durMs);
+            });
+            play.addEventListener('click',()=>{
+                if(playing){ audio.pause(); playing=false; play.innerHTML=pi(); }
+                else{
+                    document.querySelectorAll('.gvm-audio-active,.vm-audio-active').forEach(a=>{
+                        a.pause(); a.dispatchEvent(new Event('ended')); a.classList.remove('gvm-audio-active','vm-audio-active');
+                    });
+                    audio.play().then(()=>{
+                        audio.classList.add('gvm-audio-active'); playing=true; play.innerHTML=pauseI();
+                    }).catch(err=>{
+                        play.style.opacity='0.5';
+                        setTimeout(()=>play.style.opacity='',600);
+                    });
+                }
+            });
+            function upd(){
+                if(!audio.duration) return;
+                const pct=audio.currentTime/audio.duration,filled=Math.floor(pct*bars.length);
+                bars.forEach((b,i)=>i<filled?b.classList.add('gvm-p'):b.classList.remove('gvm-p'));
+                durEl.textContent=fmtMs(Math.max(0,(audio.duration-audio.currentTime)*1000));
+            }
+        }
+
+        socket.on('voice_deleted', data => {
+            // Remove the bubble for everyone in the group
+            // Require group_id to match — ignore DM deletions (data.group_id=null) on this page
+            if (!data.group_id || String(data.group_id) !== String(groupId)) return;
+            const el = document.querySelector('[data-message-id="' + String(data.id) + '"]');
+            if (el) {
+                const wrapper = el.closest('.message-group') || el;
+                wrapper.remove();
+            }
+        });
+
+        // Socket: a member was removed from the group
+        socket.on('group_member_removed', function(data) {
+            if (String(data.group_id) !== String(groupId)) return;
+            if (String(data.removed_phone) === String(myPhone)) {
+                alert('You have been removed from this group.');
+                window.location.href = '/?phone=' + encodeURIComponent(myPhone);
+                return;
+            }
+            loadGroupInfo();
+        });
+
+        socket.on('voice_message',msg=>{
+            if(String(msg.group_id)!==String(groupId)) return;
+            if(String(msg.sender)===String(myPhone)){
+                // Find the uploading temp bubble (may have marker or uploading class)
+                const tmpEl=document.querySelector('.gvm-bubble.gvm-uploading');
+                if(tmpEl){
+                    // Only wireAudio once — check it hasn't been wired already
+                    if(!tmpEl.dataset.wired){
+                        tmpEl.dataset.wired='1';
+                        tmpEl.dataset.vmId=String(msg.id);
+                        tmpEl.dataset.file=msg.file_name;
+                        tmpEl.dataset.messageId=String(msg.id);
+                        tmpEl.classList.remove('gvm-uploading');
+                        if(tmpEl.parentElement) tmpEl.parentElement.dataset.messageId=String(msg.id);
+                        wireAudio(tmpEl,msg.file_name,msg.duration_ms||0,msg.waveform||[],true,msg);
+                    }
+                }
+                return;
+            }
+            if(msg.id && document.querySelector('[data-message-id="'+msg.id+'"]')) return;
+            const el=renderBubble(msg);
+            attachBubbleEvents(el);
+            grpChat.appendChild(el); scrollGrpToBottom(true);
+        });
+
+        function drawLive(){
+            const c=cvs(); if(!c) return;
+            const ctx=c.getContext('2d'); const W=c.width,H=c.height;
+            const buf=new Uint8Array(analyser.frequencyBinCount);
+            (function frame(){
+                if(!isRec) return; animFrame=requestAnimationFrame(frame);
+                analyser.getByteFrequencyData(buf);
+                const amp=buf.reduce((s,v)=>s+v,0)/(buf.length*255);
+                ampHistory.push(amp); if(ampHistory.length>200) ampHistory.shift();
+                ctx.clearRect(0,0,W,H);
+                const bars=56,barW=W/bars-2;
+                for(let i=0;i<bars;i++){
+                    const idx=Math.min(Math.floor(i*ampHistory.length/bars),ampHistory.length-1);
+                    const a=ampHistory[idx]||0,bH=Math.max(4,a*(H-8));
+                    ctx.fillStyle=`rgba(255,255,255,${0.35+a*0.65})`;
+                    ctx.beginPath(); ctx.roundRect(i*(barW+2),(H-bH)/2,barW,bH,2); ctx.fill();
+                }
+            })();
+        }
+
+        function deriveWave(bars=40){
+            if(!ampHistory.length) return Array(bars).fill(0.5);
+            const out=[],step=ampHistory.length/bars;
+            for(let i=0;i<bars;i++){
+                const s=Math.floor(i*step),e=Math.min(Math.floor((i+1)*step),ampHistory.length);
+                let sum=0; for(let j=s;j<e;j++) sum+=ampHistory[j];
+                out.push(Math.round(Math.min(1,(e>s?sum/(e-s):0)*2.5)*1000)/1000);
+            }
+            return out;
+        }
+
+        function cleanup(){
+            isRec=false; clearInterval(timerInterval); cancelAnimationFrame(animFrame);
+            if(mediaRecorder&&mediaRecorder.state!=='inactive') mediaRecorder.stop();
+            mediaRecorder?.stream?.getTracks().forEach(t=>t.stop());
+            if(audioCtx){ audioCtx.close(); audioCtx=null; }
+            analyser=null; liveSource=null; timerEl().textContent='0:00';
+        }
+
+        function fmtMs(ms){ const s=Math.ceil(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+        function pi(){ return '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>'; }
+        function pauseI(){ return '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>'; }
+
+        return { toggle, cancel, stopAndSend, renderBubble };
+    })();
+    // Expose GVM renderBubble for loadMessages (must be after GVM is defined)
+    function GVM_renderBubble(msg){ return GVM.renderBubble(msg); }
+    // Now safe to load messages — GVM_renderBubble is available
+    loadMessages();
+    // ─────────────────────────────────────────────────────────────
+
+    // ── Live notification system: alerts the user to every new message ──
+    (function() {
+        function playNotifSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const o = ctx.createOscillator();
+                const g = ctx.createGain();
+                o.type = 'sine';
+                o.frequency.setValueAtTime(880, ctx.currentTime);
+                o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+                g.gain.setValueAtTime(0.0001, ctx.currentTime);
+                g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.01);
+                g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+                o.connect(g); g.connect(ctx.destination);
+                o.start(); o.stop(ctx.currentTime + 0.35);
+            } catch(e) {}
+        }
+
+        function ensureToastContainer() {
+            let c = document.getElementById('exomnia-notif-toast-container');
+            if (!c) {
+                c = document.createElement('div');
+                c.id = 'exomnia-notif-toast-container';
+                c.style.cssText = 'position:fixed;top:max(12px,env(safe-area-inset-top,0px));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:99999;pointer-events:none;';
+                document.body.appendChild(c);
+            }
+            return c;
+        }
+
+        // One toast per conversation, kept up to date as more messages
+        // arrive — instead of stacking a new banner per message (which
+        // floods the screen when someone sends a lot of messages fast).
+        const _activeToasts = {};
+        let _toastOrder = [];
+        const MAX_VISIBLE_TOASTS = 3;
+
+        function _dismissToast(key, immediate) {
+            const entry = _activeToasts[key];
+            if (!entry) return;
+            clearTimeout(entry.timer);
+            delete _activeToasts[key];
+            _toastOrder = _toastOrder.filter(k => k !== key);
+            const el = entry.el;
+            if (immediate) { el.remove(); return; }
+            el.style.transform = 'translateY(-20px)';
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 250);
+        }
+
+        function showNotifToast(key, title, body, onClick) {
+            const container = ensureToastContainer();
+            const existing = _activeToasts[key];
+
+            if (existing) {
+                existing.count++;
+                existing.onClick = onClick;
+                existing.el.querySelector('.exo-toast-title').textContent = title + (existing.count > 1 ? ' (' + existing.count + ')' : '');
+                existing.el.querySelector('.exo-toast-body').textContent = body;
+                clearTimeout(existing.timer);
+                existing.timer = setTimeout(() => _dismissToast(key), 4000);
+                container.prepend(existing.el);
+                return;
+            }
+
+            while (_toastOrder.length >= MAX_VISIBLE_TOASTS) {
+                _dismissToast(_toastOrder[0], true);
+            }
+
+            const toast = document.createElement('div');
+            toast.style.cssText = 'pointer-events:auto;cursor:pointer;max-width:92vw;width:340px;background:#0E4950;color:white;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.25);padding:12px 14px;display:flex;align-items:center;gap:10px;transform:translateY(-20px);opacity:0;transition:transform 0.25s ease, opacity 0.25s ease;';
+            const letter = (title || '?').trim()[0]?.toUpperCase() || '?';
+            toast.innerHTML =
+                '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2ec4b6,#0E4950);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + letter + '</div>' +
+                '<div style="flex:1;min-width:0;">' +
+                  '<div class="exo-toast-title" style="font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + title + '</div>' +
+                  '<div class="exo-toast-body" style="font-size:12.5px;color:#cfe8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + body + '</div>' +
+                '</div>';
+            toast.addEventListener('click', () => {
+                const entry = _activeToasts[key];
+                if (entry && entry.onClick) entry.onClick();
+                _dismissToast(key, true);
+            });
+            container.appendChild(toast);
+            requestAnimationFrame(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; });
+            const timer = setTimeout(() => _dismissToast(key), 4000);
+            _activeToasts[key] = { el: toast, count: 1, timer, onClick };
+            _toastOrder.push(key);
+        }
+
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission().catch(() => {});
+        }
+
+        function showOSNotification(key, title, body, onClick) {
+            if (!('Notification' in window) || Notification.permission !== 'granted') return;
+            try {
+                const n = new Notification(title, { body: body, tag: 'exomnia-' + key });
+                n.onclick = function() { window.focus(); if (onClick) onClick(); n.close(); };
+            } catch(e) {}
+        }
+
+        const _origTitle = document.title;
+        let _unread = 0;
+        function bumpTitleBadge() { _unread++; document.title = '(' + _unread + ') ' + _origTitle; }
+        function clearTitleBadge() { _unread = 0; document.title = _origTitle; }
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') clearTitleBadge();
+        });
+
+        window.exomniaNotify = function(data, suppress) {
+            if (suppress) return;
+            if (String(data.sender) === String(myPhone)) return;
+
+            // De-duplicate: the same message should never produce more than
+            // one notification, even with multiple tabs open or a socket
+            // reconnect blip causing the event to be received twice.
+            if (data.id) {
+                let seen = [];
+                try { seen = JSON.parse(localStorage.getItem('exomnia_seen_notifs') || '[]'); } catch(e) { seen = []; }
+                if (seen.indexOf(data.id) !== -1) return;
+                seen.push(data.id);
+                if (seen.length > 60) seen = seen.slice(-60);
+                try { localStorage.setItem('exomnia_seen_notifs', JSON.stringify(seen)); } catch(e) {}
+            }
+
+            let title, body, url, key;
+            if (data.type === 'group') {
+                title = data.group_name || 'Group';
+                body  = (data.sender_name || data.sender) + ': ' + (data.preview || '');
+                url   = '/group/' + data.group_id + '?phone=' + encodeURIComponent(myPhone);
+                key   = 'group:' + data.group_id;
+            } else {
+                title = data.sender_name || data.sender;
+                body  = data.preview || '';
+                url   = '/chat/' + encodeURIComponent(data.sender) + '?phone=' + encodeURIComponent(myPhone);
+                key   = 'dm:' + data.sender;
+            }
+
+            showNotifToast(key, title, body, () => { window.location.href = url; });
+            playNotifSound();
+            if (document.visibilityState !== 'visible') {
+                showOSNotification(key, title, body, () => { window.location.href = url; });
+                bumpTitleBadge();
+            }
+        };
+    })();
+</script>
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/service-worker.js').catch(()=>{});
+    });
+  }
+</script>
+</body>
+</html>

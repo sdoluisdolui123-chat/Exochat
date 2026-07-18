@@ -1,0 +1,3979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Exomnia Super App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <link rel="manifest" href="/static/manifest.json">
+  <meta name="theme-color" content="#0E4950">
+  <link rel="icon" href="/static/icons/icon-192.png">
+  <link rel="apple-touch-icon" href="/static/icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Exomnia">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"></noscript>
+  <style>
+    * {margin: 0; padding: 0; box-sizing: border-box;}
+    html {
+      height: 100%;
+      height: -webkit-fill-available;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #eef6f6;
+      height: 100vh;
+      height: 100dvh;
+      min-height: -webkit-fill-available;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #main-content {
+      flex: 1;
+      background: #eef6f6;
+      padding: 2px 15px 15px;
+      overflow-y: auto;
+      transition: 0.3s ease;
+      padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .bottom-nav {
+      display: flex;
+      justify-content: space-around;
+      background: #fff;
+      padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+      color: #0E4950;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      box-shadow: 0 -2px 20px rgba(14,73,80,0.10);
+      z-index: 1000;
+      border-top: 1px solid #daeaea;
+    }
+
+    .tab {
+      text-align: center;
+      flex: 1;
+      cursor: pointer;
+      padding: 6px 4px;
+      color: #7aabae;
+      font-weight: 600;
+      font-size: 11px;
+      transition: all 0.2s;
+      border-radius: 12px;
+      margin: 0 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+    }
+
+    .tab.active {
+      background: #0E4950;
+      color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 14px rgba(14,73,80,0.25);
+    }
+
+    .placeholder-content {
+      background: white;
+      padding: 24px 20px;
+      border-radius: 18px;
+      margin-top: 10px;
+      text-align: center;
+      border: 1px solid #daeaea;
+      box-shadow: 0 2px 12px rgba(14,73,80,0.06);
+    }
+
+    /* Add Contact Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(5px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      padding: 25px;
+      border-radius: 20px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+      animation: modalSlide 0.3s ease;
+    }
+    @keyframes modalSlide {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .modal h3 {
+      margin-bottom: 20px;
+      color: #333;
+      text-align: center;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666;
+      font-weight: 500;
+    }
+    .form-control {
+      width: 100%;
+      padding: 12px 15px;
+      border: 2px solid #e1e1e1;
+      border-radius: 10px;
+      font-size: 16px;
+      transition: all 0.3s ease;
+    }
+    .form-control:focus {
+      border-color: #0E4950;
+      box-shadow: 0 0 0 3px rgba(14, 73, 80, 0.1);
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .btn-primary {
+      background: #0E4950;
+      color: white;
+    }
+    .btn-primary:hover {
+      background: #0a363a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+    .btn-secondary {
+      background: #f8f9fa;
+      color: #666;
+    }
+    .btn-secondary:hover {
+      background: #e9ecef;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    /* Search Bar Styles */
+    /* ── Search bar ── */
+    .search-container {
+      position: relative;
+      margin-bottom: 0;
+    }
+    .search-icon {
+      position: absolute;
+      left: 13px; top: 50%;
+      transform: translateY(-50%);
+      color: #b0c4c5;
+      pointer-events: none;
+      display: flex;
+    }
+    .search-input {
+      width: 100%;
+      padding: 11px 14px 11px 38px;
+      border: 1.5px solid #e4eeee;
+      border-radius: 14px;
+      font-size: 14px;
+      background: #f6fafa;
+      color: #1a2e2f;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      box-sizing: border-box;
+    }
+    .search-input:focus {
+      outline: none;
+      border-color: #0E4950;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(14,73,80,0.09);
+    }
+    .search-input::placeholder { color: #aabcbd; }
+
+    /* ── Tabs ── */
+    .contact-tabs {
+      display: flex;
+      gap: 0;
+      margin: 5px 0 0;
+      background: #f0f6f6;
+      border-radius: 12px;
+      padding: 4px;
+    }
+    .contact-tab-btn {
+      flex: 1;
+      border: none;
+      background: none;
+      padding: 9px 0;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 9px;
+      cursor: pointer;
+      color: #7a9fa1;
+      transition: background 0.18s, color 0.18s, box-shadow 0.18s;
+    }
+    .contact-tab-btn.active {
+      background: #fff;
+      color: #0E4950;
+      box-shadow: 0 1px 6px rgba(14,73,80,0.13);
+    }
+
+    /* ── Contact / Group cards ── */
+    .cx-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      border-radius: 14px;
+      padding: 10px 12px;
+      border: 1px solid #eaf2f2;
+      box-shadow: 0 1px 4px rgba(14,73,80,0.04);
+      transition: box-shadow 0.18s, border-color 0.18s, transform 0.15s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+    }
+    .cx-card:hover {
+      box-shadow: 0 3px 14px rgba(14,73,80,0.09);
+      border-color: #c2dada;
+      transform: translateY(-1px);
+    }
+    .cx-avatar {
+      width: 50px; height: 50px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px; font-weight: 700; color: #fff;
+      flex-shrink: 0;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(14,73,80,0.18);
+    }
+    .cx-avatar.group-avatar {
+      border-radius: 14px;
+    }
+    .cx-body { flex: 1; min-width: 0; }
+    .cx-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a2e2f;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 1px;
+    }
+    .cx-sub {
+      font-size: 12px;
+      color: #8aa6a8;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cx-preview {
+      font-size: 12.5px;
+      color: #a0b8ba;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cx-preview .you-label {
+      color: #0E4950;
+      font-weight: 600;
+    }
+    .cx-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .cx-time {
+      font-size: 11px;
+      color: #b0c8ca;
+      white-space: nowrap;
+    }
+    .cx-badge {
+      background: #0E4950;
+      color: #fff;
+      font-size: 10.5px;
+      font-weight: 700;
+      border-radius: 20px;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+    .cx-chevron {
+      color: #d5e4e4;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+    }
+    .no-contacts-found {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+      font-style: italic;
+    }
+
+    /* ── Social Network Styles ─────────────────────────────── */
+    .social-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 14px;
+    }
+    .social-tabs {
+      display: flex; gap: 6px; background: white;
+      border-radius: 12px; padding: 4px;
+      border: 1px solid #daeaea; margin-bottom: 14px;
+      box-shadow: 0 1px 6px rgba(14,73,80,0.06);
+    }
+    .social-tab-btn {
+      flex: 1; padding: 8px 4px; border: none; background: none;
+      border-radius: 9px; font-size: 12px; font-weight: 600;
+      color: #7aabae; cursor: pointer; transition: all 0.2s;
+      font-family: inherit;
+    }
+    .social-tab-btn.active {
+      background: #0E4950; color: white;
+      box-shadow: 0 2px 8px rgba(14,73,80,0.22);
+    }
+    .social-post-card {
+      background: white; border-radius: 16px;
+      border: 1px solid #daeaea; margin-bottom: 12px;
+      overflow: hidden; box-shadow: 0 2px 10px rgba(14,73,80,0.06);
+    }
+    .social-post-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 14px 10px;
+    }
+    .social-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 16px; color: white;
+      flex-shrink: 0; overflow: hidden;
+    }
+    .social-post-meta { flex: 1; min-width: 0; }
+    .social-post-name {
+      font-weight: 700; font-size: 14px; color: #1a2e2f;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .social-post-headline {
+      font-size: 11px; color: #7aabae; margin-top: 1px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .social-post-time { font-size: 11px; color: #aac4c5; flex-shrink: 0; }
+    .social-post-content {
+      padding: 0 14px 10px; font-size: 14px; line-height: 1.6;
+      color: #1a2e2f; white-space: pre-wrap; word-break: break-word;
+    }
+    .social-post-image {
+      width: 100%; display: block; cursor: pointer;
+      max-height: 340px; object-fit: cover;
+    }
+    .social-post-actions {
+      display: flex; padding: 10px 14px 12px; gap: 20px;
+      border-top: 1px solid #f0f7f7;
+    }
+    .social-action-btn {
+      display: flex; align-items: center; gap: 6px;
+      border: none; background: none; color: #7aabae;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      padding: 6px 10px; border-radius: 8px;
+      transition: all 0.18s; font-family: inherit;
+    }
+    .social-action-btn:hover { background: #eef6f6; color: #0E4950; }
+    .social-action-btn.liked { color: #e76f51; }
+    .social-action-btn.liked svg { stroke: #e76f51; fill: rgba(231,111,81,0.12); }
+    /* ── Comments section ── */
+    .social-comments-section {
+      border-top: 1.5px solid #eef5f5;
+      padding: 14px 16px 10px;
+      display: flex; flex-direction: column; gap: 0;
+    }
+    .comments-header {
+      font-size: 11px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.8px; color: #9ab8ba; margin-bottom: 12px;
+    }
+    /* Individual comment */
+    .social-comment-item {
+      display: flex; gap: 9px; margin-bottom: 12px; align-items: flex-start;
+    }
+    .social-comment-item:last-of-type { margin-bottom: 4px; }
+    .social-comment-bubble {
+      flex: 1; min-width: 0;
+    }
+    .scb-inner {
+      background: #f2f8f8;
+      border-radius: 0 14px 14px 14px;
+      padding: 9px 13px 8px;
+      border: 1px solid #e2eeee;
+    }
+    .social-comment-author {
+      font-weight: 700; font-size: 12.5px; color: #0E4950;
+      margin-bottom: 2px; line-height: 1;
+    }
+    .social-comment-text {
+      font-size: 13.5px; color: #1a2e2f; line-height: 1.45;
+    }
+    .social-comment-meta {
+      display: flex; align-items: center; gap: 10px;
+      margin-top: 5px; padding-left: 2px;
+    }
+    .social-comment-time {
+      font-size: 10.5px; color: #a8c4c6;
+    }
+    .comment-like-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 10.5px; color: #a8c4c6; display: flex; align-items: center; gap: 3px;
+      padding: 0; transition: color 0.15s;
+    }
+    .comment-like-btn:hover { color: #e74c3c; }
+    .comment-like-btn.liked  { color: #e74c3c; }
+    /* Divider between comments */
+    .comment-divider {
+      height: 1px; background: #f0f7f7; margin: 0 0 12px;
+    }
+    /* Empty state */
+    .no-comments {
+      text-align: center; padding: 8px 0 12px;
+      font-size: 13px; color: #b0c8ca;
+    }
+    /* Input row */
+    .social-comment-input-row {
+      display: flex; gap: 8px; align-items: flex-end;
+      padding: 10px 0 4px;
+      border-top: 1px solid #eef5f5;
+      margin-top: 4px;
+    }
+    .comment-input-shell {
+      flex: 1; position: relative;
+    }
+    .social-comment-input {
+      width: 100%; padding: 10px 14px;
+      border: 1.5px solid #daeaea;
+      border-radius: 22px;
+      font-size: 13.5px; font-family: inherit;
+      outline: none; background: #f4fafa; color: #1a2e2f;
+      resize: none; overflow: hidden; line-height: 1.4;
+      transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
+      display: block;
+    }
+    .social-comment-input::placeholder { color: #b0c4c6; }
+    .social-comment-input:focus {
+      border-color: #0E4950;
+      box-shadow: 0 0 0 3px rgba(14,73,80,0.09);
+      background: #fff;
+    }
+    .social-comment-send {
+      width: 38px; height: 38px; border: none; border-radius: 50%;
+      background: #0E4950; color: white;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(14,73,80,0.25);
+      transition: transform 0.12s, background 0.15s, box-shadow 0.15s;
+    }
+    .social-comment-send:hover {
+      background: #0b3d43;
+      box-shadow: 0 4px 12px rgba(14,73,80,0.35);
+      transform: scale(1.06);
+    }
+    .social-comment-send:active  { transform: scale(0.93); }
+    .social-comment-send:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+    @keyframes commentSlideIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .social-comment-item { animation: commentSlideIn 0.22s ease both; }
+    .create-post-card {
+      background: white; border-radius: 16px; border: 1px solid #daeaea;
+      padding: 14px; margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(14,73,80,0.06);
+    }
+    .create-post-row { display: flex; gap: 10px; align-items: flex-start; }
+    .create-post-textarea {
+      flex: 1; border: 1.5px solid #daeaea; border-radius: 12px;
+      padding: 10px 14px; font-size: 14px; font-family: inherit;
+      resize: none; outline: none; background: #f4fafa; min-height: 70px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .create-post-textarea:focus {
+      border-color: #0E4950; box-shadow: 0 0 0 3px rgba(14,73,80,0.08); background: white;
+    }
+    .create-post-actions {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 10px;
+    }
+    .post-submit-btn {
+      background: linear-gradient(135deg,#0E4950,#1a6b75);
+      color: white; border: none; padding: 9px 20px;
+      border-radius: 10px; font-weight: 700; font-size: 13px;
+      cursor: pointer; font-family: inherit;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .post-submit-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(14,73,80,0.3); }
+    .post-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .photo-attach-btn {
+      background: none; border: 1.5px solid #daeaea; padding: 8px 12px;
+      border-radius: 10px; color: #7aabae; cursor: pointer;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      display: flex; align-items: center; gap: 6px; transition: all 0.18s;
+    }
+    .photo-attach-btn:hover { border-color: #0E4950; color: #0E4950; background: #f0fafa; }
+    /* Post creation modal */
+    #postCreateModal {
+      display: none; position: fixed; inset: 0;
+      background: #fff;
+      z-index: 2000; flex-direction: column;
+    }
+    #postCreateModal.open { display: flex; }
+    .post-modal-sheet {
+      display: flex; flex-direction: column;
+      width: 100%; height: 100%;
+      padding: calc(env(safe-area-inset-top,14px) + 14px) 18px calc(24px + env(safe-area-inset-bottom,0px));
+      animation: slideUpSheet 0.25s cubic-bezier(.32,1,.55,1) both;
+      overflow-y: auto;
+    }
+    @keyframes slideUpSheet {
+      from { transform: translateY(40px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+    .post-modal-handle { display: none; }
+    .post-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .post-modal-title { font-size: 18px; font-weight: 700; color: #0E4950; }
+    .post-modal-close {
+      width: 34px; height: 34px; border: none; background: #eef6f6;
+      border-radius: 50%; color: #0E4950; font-size: 17px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    /* People cards */
+    .people-card {
+      background: white; border-radius: 16px; border: 1px solid #daeaea;
+      padding: 16px; margin-bottom: 10px; display: flex; gap: 12px;
+      align-items: center; box-shadow: 0 2px 8px rgba(14,73,80,0.05);
+    }
+    .people-info { flex: 1; min-width: 0; }
+    .people-name {
+      font-weight: 700; font-size: 14px; color: #1a2e2f;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .people-headline {
+      font-size: 12px; color: #7aabae; margin-top: 2px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .connect-btn {
+      border: 1.5px solid #0E4950; background: none; color: #0E4950;
+      padding: 7px 14px; border-radius: 10px; font-weight: 700; font-size: 12px;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+      transition: all 0.18s; flex-shrink: 0;
+    }
+    .connect-btn:hover { background: #0E4950; color: white; }
+    .connect-btn.connected { background: #0E4950; color: white; border-color: #0E4950; }
+    .connect-btn.pending { border-color: #aac4c5; color: #aac4c5; cursor: default; }
+    /* Connection requests */
+    .conn-req-card {
+      background: white; border-radius: 14px; border: 1px solid #daeaea;
+      padding: 14px; margin-bottom: 10px; display: flex; gap: 10px;
+      align-items: center; box-shadow: 0 1px 6px rgba(14,73,80,0.05);
+    }
+    .conn-req-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .accept-btn {
+      background: #0E4950; color: white; border: none;
+      padding: 7px 12px; border-radius: 9px; font-size: 12px;
+      font-weight: 700; cursor: pointer; font-family: inherit;
+    }
+    .decline-btn {
+      background: none; color: #999; border: 1.5px solid #ddd;
+      padding: 7px 10px; border-radius: 9px; font-size: 12px;
+      font-weight: 600; cursor: pointer; font-family: inherit;
+    }
+    /* Social Profile overlay */
+    #socialProfileOverlay {
+      display: none; position: fixed; inset: 0; background: #eef6f6;
+      z-index: 9200; flex-direction: column; overflow: hidden;
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    #socialProfileOverlay.spo-visible {
+      display: flex; transform: translateX(0);
+    }
+    #socialProfileBody {
+      flex: 1; overflow-y: auto; padding: 15px 15px calc(30px + env(safe-area-inset-bottom,0px));
+    }
+    .social-profile-banner {
+      height: 75px; background: linear-gradient(135deg,#0E4950,#2ec4b6); position: relative;
+    }
+    .social-profile-avatar-wrap {
+      position: absolute; bottom: -36px; left: 18px;
+    }
+    .social-profile-stats {
+      display: flex; gap: 0; background: white; border-radius: 14px;
+      border: 1px solid #daeaea; margin-bottom: 14px;
+      overflow: hidden; box-shadow: 0 2px 8px rgba(14,73,80,0.06);
+    }
+    .social-stat {
+      flex: 1; text-align: center; padding: 14px 8px;
+      border-right: 1px solid #f0f7f7;
+    }
+    .social-stat:last-child { border-right: none; }
+    .social-stat-val {
+      font-size: 20px; font-weight: 800; color: #0E4950; display: block;
+    }
+    .social-stat-label { font-size: 11px; color: #7aabae; font-weight: 600; }
+    /* Image viewer */
+    #socialImgViewer {
+      display: none; position: fixed; inset: 0; z-index: 9999;
+      background: rgba(0,0,0,0.92); align-items: center; justify-content: center;
+    }
+    #socialImgViewer.open { display: flex; }
+    #socialImgViewer img { max-width: 95vw; max-height: 85vh; border-radius: 12px; }
+
+    /* ── Desktop / PC layout ──────────────────────────────────────────
+       Fill the whole PC screen like a real desktop app: a left nav rail
+       replaces the mobile bottom tab bar, and the tab content sits in a
+       comfortable centered reading column within the remaining space. */
+    .desktop-rail { display: none; }
+    @media (min-width: 860px) {
+      body {
+        background: #eef6f6;
+      }
+      .desktop-rail {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        width: 88px;
+        background: linear-gradient(180deg, #0E4950 0%, #0a3238 100%);
+        padding: 24px 0;
+        z-index: 500;
+        box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      }
+      .desktop-rail .rail-logo {
+        width: 46px; height: 46px; border-radius: 14px;
+        background: linear-gradient(135deg, #2EC4B6, #1a9e93);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-weight: 800; font-size: 19px;
+        margin-bottom: 22px;
+      }
+      .desktop-rail .rail-item {
+        width: 56px; height: 56px; border-radius: 14px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 3px;
+        color: rgba(255,255,255,0.55);
+        font-size: 10px; font-weight: 600;
+        cursor: pointer;
+        transition: all .15s ease;
+      }
+      .desktop-rail .rail-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+      .desktop-rail .rail-item.active { background: rgba(46,196,182,0.18); color: #2EC4B6; }
+      #main-content {
+        margin-left: 88px;
+        padding-left: max(15px, calc((100% - 720px) / 2));
+        padding-right: max(15px, calc((100% - 720px) / 2));
+        padding-bottom: 24px;
+      }
+      .bottom-nav { display: none; }
+
+      /* Two-pane chat view: list stays visible on the left, the open
+         conversation loads into a pane on the right — no full page
+         navigation away from the conversation list. */
+      body.chat-tab-active #main-content {
+        width: 380px;
+        max-width: 380px;
+        padding-left: 18px;
+        padding-right: 18px;
+        border-right: 1px solid #daeaea;
+      }
+      body.chat-tab-active #desktopChatPane {
+        display: flex;
+        position: fixed;
+        top: 0; bottom: 0;
+        left: 468px;
+        right: 0;
+        background: #eef6f6;
+      }
+    }
+    #desktopChatPane { display: none; flex-direction: column; }
+    #desktopChatPane .dcp-empty {
+      display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; color: #8aa6a8; text-align: center; padding: 40px;
+    }
+    #desktopChatPane.dcp-open .dcp-empty { display: none; }
+    #desktopChatPane iframe { width: 100%; height: 100%; border: none; display: none; }
+    #desktopChatPane.dcp-open iframe { display: block; }
+    .cx-card.cx-card-active { background: #eaf6f5; border-color: #2ec4b6; }
+  </style>
+</head>
+<body>
+
+  <!-- Desktop sidebar rail (hidden on mobile, shown via media query) -->
+  <div class="desktop-rail">
+    <div class="rail-logo">E</div>
+    <div class="tab rail-item active" onclick="openTab('chat', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Chat</span>
+    </div>
+    <div class="tab rail-item" onclick="openTab('social', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Social</span>
+    </div>
+    <div class="tab rail-item" onclick="openTab('video', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      <span>Target</span>
+    </div>
+    <div class="tab rail-item" onclick="openTab('market', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>History</span>
+    </div>
+  </div>
+
+  <div id="main-content">
+    <!-- Content will be loaded here based on active tab -->
+  </div>
+
+  <div id="desktopChatPane">
+    <div class="dcp-empty">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c3dcdc" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <div style="font-size:16px;font-weight:700;color:#0E4950;">Select a conversation</div>
+      <div style="font-size:13px;color:#8aa6a8;max-width:260px;line-height:1.5;">Choose a chat or group from the list to start messaging — it opens right here.</div>
+    </div>
+    <iframe id="desktopChatFrame" title="Conversation"></iframe>
+  </div>
+
+  <div class="bottom-nav">
+    <div class="tab active" onclick="openTab('chat', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      <span>Chat</span>
+    </div>
+    <div class="tab" onclick="openTab('social', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <span>Social</span>
+    </div>
+    <div class="tab" onclick="openTab('video', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>
+      <span>Target</span>
+    </div>
+    <div class="tab" onclick="openTab('market', this)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span>History</span>
+    </div>
+  </div>
+
+  <!-- Social Image Viewer -->
+  <div id="socialImgViewer" onclick="closeSocialImgViewer()">
+    <img id="socialImgViewerImg" src="" alt="">
+  </div>
+
+  <!-- Social Profile Overlay -->
+  <div id="socialProfileOverlay">
+    <div style="background:white;padding:14px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid #daeaea;box-shadow:0 2px 10px rgba(14,73,80,0.07);flex-shrink:0;padding-top:calc(14px + env(safe-area-inset-top,0px));">
+      <button onclick="closeSocialProfile()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#0E4950;padding:4px;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span style="font-size:17px;font-weight:700;color:#0E4950;">Profile</span>
+    </div>
+    <div id="socialProfileBody"></div>
+  </div>
+
+  <!-- Add Contact Modal -->
+  <div id="contactModal" class="modal">
+    <div class="modal-content">
+      <h3>Add New Contact</h3>
+      <form id="contactForm">
+        <input type="hidden" name="user" id="userPhone">
+        <div class="form-group">
+          <label>Country Code</label>
+          <select name="country_code" class="form-control" required>
+            <option value="+91"> India (+91)</option>
+            <option value="+1"> USA (+1)</option>
+            <option value="+44">UK (+44)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="text" name="contact_phone" class="form-control"
+                 placeholder="Enter phone number" required>
+        </div>
+        <div class="form-group">
+          <label>Contact Name</label>
+          <input type="text" name="contact_name" class="form-control"
+                 placeholder="Enter full name" required>
+        </div>
+        <div class="button-group">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveBtn">Save Contact</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let allContacts = []; // Store all contacts for search functionality
+
+    // Desktop two-pane chat view: open the selected chat/group inside the
+    // side pane instead of leaving the conversation list. Below 860px
+    // (phones/tablets) this does nothing and links navigate normally.
+    document.addEventListener('click', function(e) {
+      if (window.innerWidth < 860) return;
+      const link = e.target.closest('#main-content a.cx-card');
+      if (!link) return;
+      const href = link.getAttribute('href');
+      if (!href || href === '#') return;
+      const frame = document.getElementById('desktopChatFrame');
+      const pane  = document.getElementById('desktopChatPane');
+      if (!frame || !pane) return;
+      e.preventDefault();
+      const sep = href.includes('?') ? '&' : '?';
+      frame.src = href + sep + 'embed=desktop';
+      pane.classList.add('dcp-open');
+      document.querySelectorAll('#main-content .cx-card-active').forEach(el => el.classList.remove('cx-card-active'));
+      link.classList.add('cx-card-active');
+    });
+
+    function openTab(tabName, element) {
+      // Desktop two-pane chat view only applies while the Chat tab is open
+      document.body.classList.toggle('chat-tab-active', tabName === 'chat');
+
+      // Remove active class from all tabs
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+
+      // Add active class to clicked tab
+      if (element) {
+        element.classList.add('active');
+      } else {
+        // If no element provided, find and activate chat tab
+        document.querySelector('.tab[onclick*="chat"]').classList.add('active');
+      }
+
+      let content = document.getElementById('main-content');
+      const isLoggedIn = localStorage.getItem('exomnia_user_phone');
+
+      if (tabName === 'chat') {
+        if (isLoggedIn) {
+          // User is logged in - load contacts
+          loadContacts(isLoggedIn);
+        } else {
+          content.innerHTML = `
+            <h2> Chat</h2>
+            <div class="placeholder-content">
+              <p>Please login to access the chat feature</p>
+              <button onclick="openChatLogin()" style="background: #0E4950; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px;">
+                Login to Chat
+              </button>
+            </div>
+          `;
+        }
+      }
+      else if (tabName === 'social') {
+        loadSocialTab();
+      }
+      else if (tabName === 'video') {
+        content.innerHTML = `
+          <h2>Target</h2>
+          <div class="placeholder-content">
+            <p style="text-align: center; color: #666; font-style: italic;">
+              Target feature coming soon...<br>
+              Set and track your goals with the community.
+            </p>
+          </div>
+        `;
+      }
+      else if (tabName === 'market') {
+        content.innerHTML = `
+          <h2>History</h2>
+          <div class="placeholder-content">
+            <p style="text-align: center; color: #666; font-style: italic;">
+              History feature coming soon...<br>
+              Review your past activity and interactions.
+            </p>
+          </div>
+        `;
+      }
+      else if (tabName === 'profile') {
+        loadProfileTab();
+      }
+    }
+
+    function openChatLogin() {
+      window.location.href = '/';
+    }
+
+    function loadContacts(phone) {
+      fetch(`/api/contacts?phone=${encodeURIComponent(phone)}`)
+        .then(response => response.json())
+        .then(contacts => {
+          allContacts = contacts; // Store contacts for search functionality
+          renderContacts(contacts);
+        })
+        .catch(error => {
+          console.error('Error loading contacts:', error);
+          let content = document.getElementById('main-content');
+          content.innerHTML = `
+            <h2>Chat</h2>
+            <div class="placeholder-content">
+              <p style="color: red;">Failed to load contacts. Please try again.</p>
+            </div>
+          `;
+        });
+    }
+
+    // Track which tab is active so refreshes preserve the user's selection
+    let _activeContactTab = 'contacts';
+
+    function switchContactTab(tab) {
+      _activeContactTab = tab;
+      const contactsPane = document.getElementById('tab-pane-contacts');
+      const groupsPane   = document.getElementById('tab-pane-groups');
+      const tabContacts  = document.getElementById('tab-btn-contacts');
+      const tabGroups    = document.getElementById('tab-btn-groups');
+      const title        = document.getElementById('chat-page-title');
+      if (!contactsPane || !groupsPane) return;
+
+      if (tab === 'contacts') {
+        contactsPane.style.display = '';
+        groupsPane.style.display   = 'none';
+        tabContacts.classList.add('active');
+        tabGroups.classList.remove('active');
+        if (title) title.textContent = 'Contacts';
+      } else {
+        contactsPane.style.display = 'none';
+        groupsPane.style.display   = '';
+        tabContacts.classList.remove('active');
+        tabGroups.classList.add('active');
+        if (title) title.textContent = 'Groups';
+      }
+    }
+
+    function renderContacts(contacts) {
+      const content = document.getElementById('main-content');
+      const phone   = localStorage.getItem('exomnia_user_phone');
+
+      const headerButtons = `
+        <div style="display:flex;gap:16px;align-items:center;">
+          <button onclick="openCreateGroupModal()" title="Create Group" aria-label="Create Group"
+            style="background:none;border:none;padding:4px;cursor:pointer;color:#2ec4b6;display:flex;align-items:center;justify-content:center;transition:opacity 0.15s,transform 0.15s;"
+            onmouseover="this.style.opacity='0.7';this.style.transform='scale(1.15)'"
+            onmouseout="this.style.opacity='1';this.style.transform='scale(1)'">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="7" r="3"/>
+              <path d="M2 21v-1.5A4.5 4.5 0 0 1 6.5 15h3A4.5 4.5 0 0 1 14 19.5V21"/>
+              <circle cx="17" cy="7" r="3" opacity="0.5"/>
+              <path d="M14.5 15.2A4.5 4.5 0 0 1 17 15h1A4.5 4.5 0 0 1 22 19.5V21" opacity="0.5"/>
+              <line x1="19" y1="1" x2="19" y2="5" stroke-width="2.5"/>
+              <line x1="17" y1="3" x2="21" y2="3" stroke-width="2.5"/>
+            </svg>
+          </button>
+          <button onclick="addNewContact()" title="Add Contact" aria-label="Add Contact"
+            style="background:none;border:none;padding:4px;cursor:pointer;color:#0E4950;display:flex;align-items:center;justify-content:center;transition:opacity 0.15s,transform 0.15s;"
+            onmouseover="this.style.opacity='0.7';this.style.transform='scale(1.15)'"
+            onmouseout="this.style.opacity='1';this.style.transform='scale(1)'">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="10" cy="8" r="4"/>
+              <path d="M2 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1"/>
+              <line x1="19" y1="1" x2="19" y2="7" stroke-width="2.5"/>
+              <line x1="16" y1="4" x2="22" y2="4" stroke-width="2.5"/>
+            </svg>
+          </button>
+          <button id="headerProfileBtn" onclick="openProfileFromHeader()" title="My Profile" aria-label="My Profile"
+            style="background:none;border:none;padding:2px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform 0.18s,box-shadow 0.18s;border-radius:50%;box-shadow:0 2px 10px rgba(14,73,80,0.18);position:relative;"
+            onmouseover="this.style.transform='scale(1.10)';this.style.boxShadow='0 4px 16px rgba(14,73,80,0.32)'"
+            onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 2px 10px rgba(14,73,80,0.18)'">
+            <div style="width:40px;height:40px;border-radius:50%;padding:2px;background:linear-gradient(135deg,#2ec4b6,#0E4950);flex-shrink:0;">
+              <div id="headerProfileAvatar"
+                style="width:100%;height:100%;border-radius:50%;background:#0E4950;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;overflow:hidden;border:2px solid #fff;">
+                <span id="headerProfileInner">?</span>
+              </div>
+            </div>
+          </button>
+        </div>`;
+
+      // Build contacts pane content
+      let contactsPaneHTML;
+      if (contacts.length === 0) {
+        contactsPaneHTML = `
+          <div style="text-align:center;padding:40px 20px;">
+            <div style="font-size:40px;margin-bottom:12px;"></div>
+            <h3 style="font-size:18px;margin-bottom:8px;color:#333;">No contacts yet</h3>
+            <p style="font-size:14px;color:#666;">Add someone to start chatting!</p>
+            <button onclick="addNewContact()" style="background:#0E4950;color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;margin-top:15px;font-weight:bold;">+ Add Contact</button>
+          </div>`;
+      } else {
+        let rows = '';
+        contacts.forEach(c => { rows += generateContactHTML(c); });
+        contactsPaneHTML = `<div id="contactsList" style="display:flex;flex-direction:column;gap:6px;">${rows}</div>`;
+      }
+
+      // Determine active tab
+      const isContacts = _activeContactTab === 'contacts';
+
+      content.innerHTML = `
+        <div class="cx-header-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <h2 id="chat-page-title" style="color:#0E4950;margin:0;font-size:26px;font-weight:800;letter-spacing:-0.5px;">${isContacts ? 'Contacts' : 'Groups'}</h2>
+            ${headerButtons}
+          </div>
+
+          <div class="search-container">
+            <div class="search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </div>
+            <input type="text" id="searchInput" class="search-input"
+              placeholder="Search by name or phone…" onkeyup="filterContacts()">
+          </div>
+
+          <!-- Tabs -->
+          <div class="contact-tabs">
+            <button id="tab-btn-contacts" class="contact-tab-btn ${isContacts ? 'active' : ''}" onclick="switchContactTab('contacts')">Chats</button>
+            <button id="tab-btn-groups"   class="contact-tab-btn ${!isContacts ? 'active' : ''}" onclick="switchContactTab('groups')">Groups</button>
+          </div>
+        </div>
+
+        <!-- Contacts pane -->
+        <div id="tab-pane-contacts" style="display:${isContacts ? '' : 'none'};margin-top:6px;">
+          ${contactsPaneHTML}
+        </div>
+
+        <!-- Groups pane (populated after fetch) -->
+        <div id="tab-pane-groups" style="display:${!isContacts ? '' : 'none'};margin-top:6px;">
+          <div style="text-align:center;padding:30px;color:#aaa;font-size:14px;">Loading…</div>
+        </div>`;
+
+      updateHeaderProfileAvatar();
+
+      // Fetch groups and populate the groups pane
+      fetch('/api/groups?phone=' + encodeURIComponent(phone))
+        .then(r => r.json())
+        .then(groups => {
+          const groupsPane = document.getElementById('tab-pane-groups');
+          if (!groupsPane) return;
+          if (groups.length > 0) {
+            let html = `<div style="display:flex;flex-direction:column;gap:6px;">`;
+            groups.forEach(g => { html += generateGroupHTML(g); });
+            html += `</div>`;
+            groupsPane.innerHTML = html;
+          } else {
+            groupsPane.innerHTML = `
+              <div style="text-align:center;padding:40px 20px;">
+                <div style="font-size:38px;margin-bottom:12px;">👥</div>
+                <h3 style="font-size:17px;margin-bottom:8px;color:#333;">No groups yet</h3>
+                <p style="font-size:14px;color:#666;">Create a group to chat with multiple people.</p>
+                <button onclick="openCreateGroupModal()" style="background:#0E4950;color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;margin-top:15px;font-weight:bold;">+ Create Group</button>
+              </div>`;
+          }
+          attachDeleteRowEvents(content);
+        })
+        .catch(() => {
+          const groupsPane = document.getElementById('tab-pane-groups');
+          if (groupsPane) groupsPane.innerHTML = `<p style="text-align:center;color:#c00;padding:20px;">Failed to load groups.</p>`;
+        });
+    }
+
+    // ── Header Profile Avatar ──────────────────────────────────────
+    function updateHeaderProfileAvatar() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      const avatarDiv = document.getElementById('headerProfileAvatar');
+      const innerSpan = document.getElementById('headerProfileInner');
+      if (!avatarDiv || !innerSpan) return;
+      fetch('/api/profile?phone=' + encodeURIComponent(phone))
+        .then(r => r.json())
+        .then(data => {
+          if (data.avatar_photo) {
+            avatarDiv.style.background = 'transparent';
+            avatarDiv.style.overflow = 'hidden';
+            // Replace span with a full-bleed img so object-fit:cover fills the circle perfectly
+            innerSpan.style.cssText = 'display:contents;';
+            innerSpan.innerHTML = `<img src="${data.avatar_photo}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" alt="">`;
+            avatarDiv.style.position = 'relative';
+          } else {
+            const initial = (data.display_name || data.phone || '?')[0].toUpperCase();
+            const content = data.avatar_emoji || initial;
+            const color = data.avatar_color || '#0E4950';
+            avatarDiv.style.background = color;
+            avatarDiv.style.position = '';
+            innerSpan.style.cssText = '';
+            innerSpan.innerHTML = '';
+            innerSpan.textContent = content;
+          }
+        })
+        .catch(() => {
+          const p = localStorage.getItem('exomnia_user_phone') || '?';
+          if (innerSpan) innerSpan.textContent = p[0].toUpperCase();
+        });
+    }
+
+    function openProfileFromHeader() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) { window.location.href = '/'; return; }
+      const overlay = document.getElementById('profileFullOverlay');
+      overlay.style.display = 'flex';
+      // Animate in
+      setTimeout(() => overlay.classList.add('pfo-visible'), 10);
+      loadProfileOverlay(phone);
+    }
+
+    function closeProfileOverlay() {
+      const overlay = document.getElementById('profileFullOverlay');
+      overlay.classList.remove('pfo-visible');
+      setTimeout(() => { overlay.style.display = 'none'; }, 320);
+    }
+
+    function openProfileNetworkPage() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      const page = document.getElementById('profileNetworkPage');
+      const body = document.getElementById('profileNetworkBody');
+      page.style.display = 'flex';
+      requestAnimationFrame(() => page.classList.add('pnp-visible'));
+      body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-icon">&#128101;</div><div class="pnp-empty-text">Loading...</div></div>';
+      fetch('/api/social/connections?phone=' + encodeURIComponent(phone))
+        .then(r => r.json())
+        .then(data => {
+          const all = [...new Set([...(data.followers || []), ...(data.following || [])])];
+          if (all.length === 0) {
+            body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-icon">&#128101;</div><div class="pnp-empty-text">No connections yet</div><div class="pnp-empty-sub">Connect with people to grow your network</div></div>';
+            return;
+          }
+          return Promise.all(all.map(p => fetch('/api/profile?phone=' + encodeURIComponent(p)).then(r => r.json()).catch(() => ({phone: p, display_name: p}))));
+        })
+        .then(profiles => {
+          if (!profiles) return;
+          body.innerHTML = profiles.map(p => {
+            const initial = (p.display_name || p.phone || '?')[0].toUpperCase();
+            const avatarContent = p.avatar_photo
+              ? `<img src="${p.avatar_photo}" style="width:100%;height:100%;object-fit:cover;" alt="">`
+              : (p.avatar_emoji || initial);
+            const bgColor = p.avatar_color || '#0E4950';
+            return `<div class="pnp-user-card" onclick="openSocialProfile('${p.phone}')" style="cursor:pointer;">
+              <div class="pnp-user-avatar" style="background:${p.avatar_photo ? 'transparent' : bgColor};">
+                ${avatarContent}
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div style="font-weight:700;color:#1a2e2f;font-size:15px;">${escapeHtml(p.display_name && p.display_name.trim() ? p.display_name : 'NEOX User')}</div>
+                ${p.headline ? `<div style="font-size:12px;color:#0E4950;margin-top:2px;">${escapeHtml(p.headline)}</div>` : ''}
+                <div style="font-size:12px;color:#8aa3a5;margin-top:2px;"></div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#b0c8ca" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+            </div>`;
+          }).join('');
+        })
+        .catch(() => {
+          body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-text" style="color:red;">Failed to load network</div></div>';
+        });
+    }
+
+    function closeProfileNetworkPage() {
+      const page = document.getElementById('profileNetworkPage');
+      page.classList.remove('pnp-visible');
+      setTimeout(() => { page.style.display = 'none'; }, 320);
+    }
+
+    function openProfilePostsPage() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      const page = document.getElementById('profilePostsPage');
+      const body = document.getElementById('profilePostsBody');
+      page.style.display = 'flex';
+      requestAnimationFrame(() => page.classList.add('pnp-visible'));
+      body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-icon">&#128221;</div><div class="pnp-empty-text">Loading...</div></div>';
+      fetch('/api/social/user_posts?phone=' + encodeURIComponent(phone) + '&viewer=' + encodeURIComponent(phone))
+        .then(r => r.json())
+        .then(posts => {
+          if (!posts || posts.length === 0) {
+            body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-icon">&#128221;</div><div class="pnp-empty-text">No posts yet</div><div class="pnp-empty-sub">Share something with your network</div></div>';
+            return;
+          }
+          body.innerHTML = posts.map(post => {
+            const ts = post.timestamp ? new Date(post.timestamp).toLocaleDateString('en-IN', {day:'numeric',month:'short',year:'numeric'}) : '';
+            const imgHtml = post.image_path ? `<img class="pnp-post-img" src="${post.image_path}" alt="" onclick="openSocialImgViewer && openSocialImgViewer('${post.image_path}')">` : '';
+            return `<div class="pnp-post-card">
+              <div style="font-size:13px;color:#aaa;margin-bottom:8px;">${ts}</div>
+              <div style="font-size:15px;color:#1a2e2f;line-height:1.5;">${escapeHtml(post.content || '')}</div>
+              ${imgHtml}
+              <div style="display:flex;gap:16px;margin-top:12px;">
+                <span style="font-size:13px;color:#888;">&#10084; ${post.likes || 0}</span>
+                <span style="font-size:13px;color:#888;">&#128172; ${post.comment_count || 0}</span>
+              </div>
+            </div>`;
+          }).join('');
+        })
+        .catch(() => {
+          body.innerHTML = '<div class="pnp-empty"><div class="pnp-empty-text" style="color:red;">Failed to load posts</div></div>';
+        });
+    }
+
+    function closeProfilePostsPage() {
+      const page = document.getElementById('profilePostsPage');
+      page.classList.remove('pnp-visible');
+      setTimeout(() => { page.style.display = 'none'; }, 320);
+    }
+
+    function loadProfileOverlay(phone) {
+      const body = document.getElementById('profileOverlayBody');
+      body.innerHTML = `<div style="display:flex;justify-content:center;padding:60px 0;"><div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`;
+      Promise.all([
+        fetch('/api/profile?phone=' + encodeURIComponent(phone)).then(r => r.json()),
+        fetch('/api/social/user_stats?phone=' + encodeURIComponent(phone)).then(r => r.json()).catch(() => ({}))
+      ]).then(([data, stats]) => {
+          _profileData = data;
+          renderProfileOverlay(data, stats);
+        })
+        .catch(() => {
+          body.innerHTML = `<div style="padding:40px;text-align:center;color:red;">Failed to load profile.</div>`;
+        });
+    }
+
+    function renderProfileOverlay(p, stats) {
+      stats = stats || {};
+      const body = document.getElementById('profileOverlayBody');
+      const initial = (p.display_name || p.phone || '?')[0].toUpperCase();
+      const avatarInner = p.avatar_emoji || initial;
+      const memberSince = p.last_online ? new Date(p.last_online).toLocaleDateString('en-IN', {month:'long', year:'numeric'}) : '—';
+      const bgColor = p.avatar_color || '#0E4950';
+      const connections = (stats.followers || 0) + (stats.following || 0);
+      const postsCount = stats.posts || 0;
+
+      const avatarContent = p.avatar_photo
+        ? `<img src="${p.avatar_photo}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" alt="">`
+        : `<span style="font-size:34px;font-weight:700;color:white;line-height:1;">${avatarInner}</span>`;
+
+      body.innerHTML = `
+        <div class="profile-card">
+          <div class="profile-banner" style="${p.banner_photo ? `background-image:url('${p.banner_photo}?t=${Date.now()}');background-size:cover;background-position:center;` : ''}">
+            <button class="pfo-back-btn" onclick="closeProfileOverlay()" aria-label="Back">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button onclick="triggerBannerPhotoInput()" title="Change banner" style="position:absolute;bottom:10px;right:12px;background:rgba(0,0,0,0.42);border:1.5px solid rgba(255,255,255,0.6);color:#fff;border-radius:20px;padding:5px 11px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;backdrop-filter:blur(4px);z-index:3;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3"/></svg>
+              Edit cover
+            </button>
+          </div>
+          <input type="file" id="bannerPhotoInput" accept="image/*" style="display:none" onchange="uploadBannerPhoto(this)">
+          <div class="profile-avatar-wrap">
+            <div style="position:relative;display:inline-block;">
+              <div class="profile-avatar" style="background:${p.avatar_photo ? 'transparent' : bgColor};overflow:hidden;" onclick="triggerAvatarPhotoInput()" title="Change photo">
+                ${avatarContent}
+              </div>
+              <button onclick="triggerAvatarPhotoInput()" title="Change photo" style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#0E4950;border:2.5px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.25);z-index:3;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none" onchange="uploadAvatarPhoto(this)">
+          <div class="profile-info-block">
+            <div class="profile-display-name">${p.display_name || 'Exomnia User'}</div>
+            <div class="profile-bio">${p.bio ? escapeHtml(p.bio) : '<span style="color:#bbb;font-style:italic;">No bio yet</span>'}</div>
+          </div>
+          <div style="display:flex;justify-content:center;gap:0;border-top:1px solid #f0f0f0;margin-top:14px;border-radius:0 0 24px 24px;overflow:hidden;">
+            <div id="profileNetworkTab" style="flex:1;text-align:center;padding:14px 8px;border-right:1px solid #f0f0f0;cursor:pointer;position:relative;" onclick="openProfileNetworkPage()">
+              <div style="font-size:20px;font-weight:800;color:#0E4950;">${connections}</div>
+              <div style="font-size:11px;color:#888;font-weight:500;margin-top:2px;">Network</div>
+
+            </div>
+            <div id="profilePostsTab" style="flex:1;text-align:center;padding:14px 8px;cursor:pointer;position:relative;" onclick="openProfilePostsPage()">
+              <div style="font-size:20px;font-weight:800;color:#0E4950;">${postsCount}</div>
+              <div style="font-size:11px;color:#888;font-weight:500;margin-top:2px;">Posts</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="openProfileEditFromOverlay()">
+            <div class="profile-row-icon" style="background:#e8f5f5;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E4950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Edit Profile</div>
+              <div class="profile-row-sub">Name, bio, avatar</div>
+            </div>
+            <div class="profile-row-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="profile-row" onclick="copyPhone()">
+            <div class="profile-row-icon" style="background:#fff3e0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.73a16 16 0 0 0 6.29 6.29l1.62-1.62a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Phone Number</div>
+              <div class="profile-row-sub">${p.phone} · tap to copy</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row">
+            <div class="profile-row-icon" style="background:#e8f0ff;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">End-to-End Encrypted</div>
+              <div class="profile-row-sub">All messages are secured</div>
+            </div>
+          </div>
+          <div class="profile-row">
+            <div class="profile-row-icon" style="background:#fce4ec;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Member Since</div>
+              <div class="profile-row-sub">${memberSince}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="confirmLogout()" style="color:#e53935;">
+            <div class="profile-row-icon" style="background:#fdecea;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <div class="profile-row-label" style="color:#e53935;">Logout</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openProfileEditFromOverlay() {
+      openProfileEdit();
+    }
+
+    function _cxRelTime(iso) {
+      if (!iso) return '';
+      const d = new Date(iso), now = new Date();
+      const diff = now - d;
+      const mins = Math.floor(diff / 60000);
+      const hrs  = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      if (mins < 1)  return 'now';
+      if (mins < 60) return mins + 'm';
+      if (hrs  < 24) return hrs  + 'h';
+      if (days < 7)  return days + 'd';
+      return d.toLocaleDateString([], {month:'short', day:'numeric'});
+    }
+
+    function generateGroupHTML(group) {
+      const phone       = localStorage.getItem('exomnia_user_phone');
+      const letter      = group.avatar_letter || group.name[0].toUpperCase();
+      const memberCount = group.member_count || 0;
+      const isCreator   = String(group.created_by) === String(phone);
+      const hasLeft     = !!group.left_group;
+      const actionLabel = isCreator ? 'Delete Group' : 'Leave Group';
+      const unread      = group.unread_count || 0;
+      const timeStr     = _cxRelTime(group.last_message_time);
+      const preview     = hasLeft
+        ? '<em style="color:#c0d0d1">You left this group</em>'
+        : group.last_message
+          ? group.last_message.replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          : '<em style="color:#c0d0d1">No messages yet</em>';
+      const avatarStyle = hasLeft
+        ? 'background:linear-gradient(135deg,#a0b8ba,#7a9fa1);opacity:0.75;'
+        : 'background:linear-gradient(135deg,#2ec4b6,#0E4950);';
+      const nameStyle = hasLeft ? 'color:#7a9fa1;' : '';
+      const leftBadge = hasLeft
+        ? '<span style="font-size:10px;background:#f0f6f6;color:#8aa3a5;border:1px solid #d8e8e8;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle;">left</span>'
+        : '';
+
+      return `
+        <div class="deletable-row" data-type="group" data-id="${group.id}" data-label="${group.name.replace(/"/g,'&quot;')}" data-action="${actionLabel}" data-last-time="${group.last_message_time || ''}">
+          <a href="${hasLeft ? '#' : '/group/' + group.id + '?phone=' + encodeURIComponent(phone)}" class="cx-card" style="text-decoration:none;${hasLeft ? 'pointer-events:none;' : ''}" onclick="${hasLeft ? 'return false;' : ''}">
+            <div class="cx-avatar group-avatar" style="${avatarStyle}">${letter}</div>
+            <div class="cx-body">
+              <div class="cx-name" style="${nameStyle}">${group.name}${leftBadge}</div>
+              <div class="cx-sub">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
+              <div class="cx-preview">${preview}</div>
+            </div>
+            <div class="cx-meta">
+              ${timeStr && !hasLeft ? `<span class="cx-time">${timeStr}</span>` : ''}
+              ${unread  && !hasLeft ? `<span class="cx-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
+            </div>
+            ${!hasLeft ? '<div class="cx-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>' : ''}
+          </a>
+        </div>`;
+    }
+
+    function generateContactHTML(contact) {
+      const initial     = contact.contact_name ? contact.contact_name[0].toUpperCase() : contact.contact_phone[0];
+      const displayName = contact.contact_name || contact.contact_phone;
+      const phone       = localStorage.getItem('exomnia_user_phone');
+      const rawMsg      = contact.last_message || '';
+      const isYou       = contact.last_sender && String(contact.last_sender) === String(phone);
+      const unread      = contact.unread_count || 0;
+      const timeStr     = _cxRelTime(contact.last_message_time);
+
+      let previewHTML;
+      if (!rawMsg && !contact.last_sender) {
+        previewHTML = '<em style="color:#c0d0d1">No messages yet</em>';
+      } else if (rawMsg.startsWith('🎤') || rawMsg === '🎤 Voice message') {
+        previewHTML = (isYou ? '<span class="you-label">You: </span>' : '') + '🎤 Voice message';
+      } else if (rawMsg) {
+        previewHTML = (isYou ? '<span class="you-label">You: </span>' : '') + rawMsg.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      } else {
+        previewHTML = '<em style="color:#c0d0d1">No messages yet</em>';
+      }
+
+      const avatarColor = contact.avatar_color || '#0E4950';
+      let avatarInner;
+      if (contact.avatar_photo) {
+        avatarInner = `<img src="${contact.avatar_photo}" style="width:100%;height:100%;object-fit:cover;" alt="">`;
+      } else if (contact.avatar_emoji) {
+        avatarInner = contact.avatar_emoji;
+      } else {
+        avatarInner = initial;
+      }
+
+      return `
+        <div class="deletable-row" data-type="contact" data-phone="${contact.contact_phone}" data-label="${displayName.replace(/"/g,'&quot;')}" data-action="Delete Contact" data-last-time="${contact.last_message_time || ''}">
+          <a href="/chat/${encodeURIComponent(contact.contact_phone)}?phone=${encodeURIComponent(phone)}" class="cx-card" style="text-decoration:none;">
+            <div class="cx-avatar" style="background:linear-gradient(135deg,${avatarColor},#2ec4b6);">${avatarInner}</div>
+            <div class="cx-body">
+              <div class="cx-name">${displayName}</div>
+              ${contact.contact_name ? `<div class="cx-sub">${contact.contact_phone}</div>` : ''}
+              <div class="cx-preview">${previewHTML}</div>
+            </div>
+            <div class="cx-meta">
+              ${timeStr ? `<span class="cx-time">${timeStr}</span>` : ''}
+              ${unread  ? `<span class="cx-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
+            </div>
+            <div class="cx-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </a>
+        </div>`;
+    }
+
+    function filterContacts() {
+      const searchTerm = document.getElementById('searchInput')?.value.toLowerCase() || '';
+
+      if (_activeContactTab === 'groups') {
+        // Filter group rows inside the groups pane
+        const groupsPane = document.getElementById('tab-pane-groups');
+        if (!groupsPane) return;
+        const rows = groupsPane.querySelectorAll('[data-type="group"]');
+        rows.forEach(row => {
+          const name = (row.dataset.name || row.querySelector('strong,b,[style*="font-weight"]')?.textContent || '').toLowerCase();
+          row.closest('.contact-row, [style*="background:white"], [style*="background:#fff"], [style*="background: white"], [style*="background: #fff"]')
+            ? (row.closest('[style]').style.display = name.includes(searchTerm) ? '' : 'none')
+            : (row.style.display = name.includes(searchTerm) ? '' : 'none');
+        });
+        return;
+      }
+
+      // Default: filter contacts list
+      const contactsList = document.getElementById('contactsList');
+      if (!contactsList) return;
+
+      const filteredContacts = allContacts.filter(contact => {
+        const name  = (contact.contact_name  || '').toLowerCase();
+        const phone = (contact.contact_phone || '').toLowerCase();
+        return name.includes(searchTerm) || phone.includes(searchTerm);
+      });
+
+      if (filteredContacts.length === 0) {
+        contactsList.innerHTML = `
+          <div class="no-contacts-found">
+            <p>No contacts found matching "${searchTerm}"</p>
+          </div>`;
+      } else {
+        let html = '';
+        filteredContacts.forEach(contact => { html += generateContactHTML(contact); });
+        contactsList.innerHTML = html;
+      }
+    }
+
+    // Add Contact Modal Functions
+    function addNewContact() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (phone) {
+        document.getElementById('userPhone').value = phone;
+        openModal();
+      }
+    }
+
+    function openModal() {
+      document.getElementById("contactModal").style.display = "flex";
+    }
+
+    function closeModal() {
+      document.getElementById("contactModal").style.display = "none";
+      document.getElementById("contactForm").reset();
+      document.getElementById("saveBtn").classList.remove('loading');
+      document.getElementById("saveBtn").textContent = 'Save Contact';
+    }
+
+    // Handle contact form submission
+    document.getElementById('contactForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const saveBtn = document.getElementById('saveBtn');
+      const formData = new FormData(this);
+
+      saveBtn.classList.add('loading');
+      saveBtn.textContent = 'Saving...';
+
+      fetch('/add_contact', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      })
+      .then(response => {
+        if (response.ok) {
+          closeModal();
+          // Reload contacts
+          const phone = localStorage.getItem('exomnia_user_phone');
+          if (phone) {
+            loadContacts(phone);
+          }
+        } else {
+          throw new Error('Save failed');
+        }
+      })
+      .catch(error => {
+        saveBtn.classList.remove('loading');
+        saveBtn.textContent = 'Save Contact';
+        alert('Error saving contact. Please try again.');
+        console.error('Error:', error);
+      });
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('contactModal').addEventListener('click', function(e) {
+      if (e.target === this) closeModal();
+    });
+
+    // Check for login status on page load
+    window.addEventListener('load', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const loggedInPhone = urlParams.get('logged_in_phone');
+
+      if (loggedInPhone) {
+        localStorage.setItem('exomnia_user_phone', loggedInPhone);
+        // Remove the parameter from URL
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+
+        // Automatically open chat tab with info
+        openTab('chat');
+      } else {
+        // Check if already logged in
+        const savedPhone = localStorage.getItem('exomnia_user_phone');
+        if (savedPhone) {
+          openTab('chat');
+        } else {
+          // Show chat tab by default
+          openTab('chat');
+        }
+      }
+    });
+  </script>
+
+  <!-- Create Group Modal -->
+  <div id="createGroupModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,30,30,0.55);backdrop-filter:blur(6px);z-index:2000;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 22px calc(32px + env(safe-area-inset-bottom,0px));width:100%;max-height:90vh;overflow-y:auto;animation:slideUpFromBottom 0.35s cubic-bezier(0.25,0.46,0.45,0.94);">
+      <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 20px;"></div>
+      <h3 style="color:#0E4950;font-size:18px;font-weight:700;margin-bottom:6px;">New Group</h3>
+      <p style="color:#8aa3a5;font-size:13px;margin-bottom:20px;">Name your group and pick contacts to add.</p>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block;font-size:13px;font-weight:600;color:#4a6567;margin-bottom:6px;">Group Name</label>
+        <input id="groupNameInput" type="text" placeholder="e.g. Family, Work Team…" style="width:100%;padding:12px 16px;border:1.5px solid #d8e8e8;border-radius:12px;font-size:15px;outline:none;font-family:inherit;background:#f8fafa;color:#1a2e2f;">
+      </div>
+
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:13px;font-weight:600;color:#4a6567;margin-bottom:10px;">Select Members</label>
+        <div id="groupContactPicker" style="display:flex;flex-direction:column;gap:8px;max-height:280px;overflow-y:auto;"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeCreateGroupModal()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button onclick="submitCreateGroup()" style="flex:2;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#0E4950,#1a6b75);color:white;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">Create Group</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete / Leave confirmation modal -->
+  <div id="deleteRowModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(10,30,30,0.55);backdrop-filter:blur(6px);z-index:3000;align-items:flex-end;justify-content:center;">
+    <div style="background:#fff;border-radius:28px 28px 0 0;padding:28px 22px calc(32px + env(safe-area-inset-bottom,0px));width:100%;animation:slideUpFromBottom 0.3s cubic-bezier(0.25,0.46,0.45,0.94);">
+      <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 20px;"></div>
+      <p id="deleteRowLabel" style="font-size:16px;font-weight:600;color:#1a2e2f;text-align:center;margin-bottom:6px;"></p>
+      <p id="deleteRowSub" style="font-size:13px;color:#8aa3a5;text-align:center;margin-bottom:24px;"></p>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeDeleteRowModal()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="deleteRowConfirmBtn" style="flex:2;padding:13px;border:none;border-radius:12px;background:#e53935;color:white;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .deletable-row { position:relative; overflow:hidden; border-radius:18px; }
+    .deletable-row.swiped-reveal { transform:translateX(-80px); transition:transform 0.2s ease; }
+    .delete-swipe-btn {
+      position:absolute; right:0; top:0; bottom:0; width:80px;
+      background:#e53935; display:flex; align-items:center; justify-content:center;
+      color:white; font-size:12px; font-weight:700; cursor:pointer;
+      border-radius:0 18px 18px 0; flex-direction:column; gap:3px;
+    }
+  </style>
+
+  <script>
+    // ── Delete contact / group: long-press OR swipe-left ──────────
+    let _delTarget = null;
+    let _delPressTimer = null;
+    let _swipeStartX = 0;
+    let _swipeEl = null;
+    let _currentlyRevealed = null;
+
+    function openDeleteRowModal(el) {
+      _delTarget = el;
+      const label = el.dataset.label || '';
+      const action = el.dataset.action || 'Delete';
+      document.getElementById('deleteRowLabel').textContent = action + ': ' + label;
+      document.getElementById('deleteRowSub').textContent =
+        el.dataset.type === 'group' && action.startsWith('Leave')
+          ? 'You will leave this group and no longer see its messages.'
+          : el.dataset.type === 'group'
+            ? 'This will permanently delete the group and all its messages for everyone.'
+            : 'This contact will be removed from your list. Your chat history is kept.';
+      const btn = document.getElementById('deleteRowConfirmBtn');
+      btn.disabled = false;
+      btn.textContent = action.startsWith('Leave') ? 'Leave' : 'Delete';
+      btn.style.background = '#e53935';
+      document.getElementById('deleteRowModal').style.display = 'flex';
+    }
+
+    function closeDeleteRowModal() {
+      document.getElementById('deleteRowModal').style.display = 'none';
+      const btn = document.getElementById('deleteRowConfirmBtn');
+      btn.disabled = false;
+      if (_currentlyRevealed) {
+        _currentlyRevealed.style.transform = '';
+        _currentlyRevealed = null;
+      }
+      _delTarget = null;
+    }
+
+    document.getElementById('deleteRowConfirmBtn').addEventListener('click', async function() {
+      if (!_delTarget) return;
+      const btn = this;
+      btn.disabled = true; btn.textContent = 'Please wait…';
+      const phone = localStorage.getItem('exomnia_user_phone');
+      const type = _delTarget.dataset.type;
+      try {
+        let res, data;
+        if (type === 'contact') {
+          res = await fetch('/api/delete_contact', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ user_phone: phone, contact_phone: _delTarget.dataset.phone })
+          });
+          data = await res.json();
+        } else {
+          res = await fetch('/api/delete_group', {
+            method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ user_phone: phone, group_id: parseInt(_delTarget.dataset.id) })
+          });
+          data = await res.json();
+        }
+        if (data.success) {
+          const deletedType = type;
+          const deletedTarget = _delTarget;
+          closeDeleteRowModal();
+          deletedTarget.style.transition = 'opacity 0.25s, transform 0.25s';
+          deletedTarget.style.opacity = '0';
+          deletedTarget.style.transform = 'translateX(-30px)';
+          setTimeout(() => {
+            deletedTarget.remove();
+            if (deletedType === 'group') {
+              // Check if groups pane is now empty and show empty state if so
+              const groupsPane = document.getElementById('tab-pane-groups');
+              if (groupsPane) {
+                const remaining = groupsPane.querySelectorAll('[data-type="group"]');
+                if (remaining.length === 0) {
+                  groupsPane.innerHTML = `
+                    <div style="text-align:center;padding:40px 20px;">
+                      <div style="font-size:38px;margin-bottom:12px;">👥</div>
+                      <h3 style="font-size:17px;margin-bottom:8px;color:#333;">No groups yet</h3>
+                      <p style="font-size:14px;color:#666;">Create a group to chat with multiple people.</p>
+                      <button onclick="openCreateGroupModal()" style="background:#0E4950;color:white;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;margin-top:15px;font-weight:bold;">+ Create Group</button>
+                    </div>`;
+                }
+              }
+            } else {
+              loadContacts(phone); // contacts still need a full refresh
+            }
+          }, 260);
+        } else {
+          btn.disabled = false;
+          btn.textContent = _delTarget.dataset.action || 'Delete';
+          alert(data.error || 'Action failed. Please try again.');
+        }
+      } catch(e) {
+        btn.disabled = false;
+        btn.textContent = _delTarget.dataset.action || 'Delete';
+        alert('Network error. Please try again.');
+      }
+    });
+
+    document.getElementById('deleteRowModal').addEventListener('click', function(e) {
+      if (e.target === this) closeDeleteRowModal();
+    });
+
+    // Attach long-press + swipe to any .deletable-row that appears in the DOM
+    function attachDeleteRowEvents(container) {
+      container.querySelectorAll('.deletable-row').forEach(row => {
+        if (row._deleteEventsAttached) return;
+        row._deleteEventsAttached = true;
+
+        // ── Long-press (mobile & desktop) ──
+        let pressTimer = null;
+        row.addEventListener('pointerdown', function(e) {
+          if (e.pointerType === 'touch') return; // handled by touchstart for touch
+          pressTimer = setTimeout(() => openDeleteRowModal(row), 600);
+        });
+        row.addEventListener('pointerup', () => clearTimeout(pressTimer));
+        row.addEventListener('pointercancel', () => clearTimeout(pressTimer));
+
+        row.addEventListener('touchstart', function(e) {
+          _swipeStartX = e.touches[0].clientX;
+          _swipeEl = row;
+          pressTimer = setTimeout(() => {
+            clearTimeout(pressTimer);
+            openDeleteRowModal(row);
+          }, 600);
+        }, { passive: true });
+        row.addEventListener('touchmove', function(e) {
+          clearTimeout(pressTimer);
+          if (_swipeEl !== row) return;
+          const dx = _swipeStartX - e.touches[0].clientX;
+          if (dx > 10) {
+            // Reveal swipe-delete button
+            row.style.transition = '';
+            row.style.transform = `translateX(${Math.min(-dx, -80)}px)`;
+          }
+        }, { passive: true });
+        row.addEventListener('touchend', function(e) {
+          clearTimeout(pressTimer);
+          if (_swipeEl !== row) return;
+          const dx = _swipeStartX - (e.changedTouches[0]?.clientX ?? _swipeStartX);
+          if (dx > 60) {
+            // Snap to revealed state and show delete button
+            row.style.transition = 'transform 0.2s ease';
+            row.style.transform = 'translateX(-80px)';
+            // Add delete button overlay if not already there
+            if (!row.querySelector('.delete-swipe-btn')) {
+              const btn = document.createElement('div');
+              btn.className = 'delete-swipe-btn';
+              btn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg><span>' + (row.dataset.action || 'Delete') + '</span>';
+              btn.addEventListener('click', e => { e.stopPropagation(); openDeleteRowModal(row); });
+              row.appendChild(btn);
+            }
+            if (_currentlyRevealed && _currentlyRevealed !== row) {
+              _currentlyRevealed.style.transform = '';
+              const old = _currentlyRevealed.querySelector('.delete-swipe-btn');
+              if (old) old.remove();
+            }
+            _currentlyRevealed = row;
+          } else {
+            row.style.transition = 'transform 0.2s ease';
+            row.style.transform = '';
+          }
+          _swipeEl = null;
+        }, { passive: true });
+
+        // Right-click on desktop
+        row.addEventListener('contextmenu', function(e) {
+          e.preventDefault();
+          openDeleteRowModal(row);
+        });
+      });
+    }
+
+    // Patch renderContacts to call attachDeleteRowEvents after render
+    const _origRenderContacts = window.renderContacts;
+    // Re-attach after content renders (MutationObserver on main-content)
+    const _mainContent = document.getElementById('main-content');
+    if (_mainContent) {
+      new MutationObserver(() => {
+        attachDeleteRowEvents(_mainContent);
+        // Dismiss swipe if user taps elsewhere
+        _mainContent.addEventListener('click', function(e) {
+          if (_currentlyRevealed && !_currentlyRevealed.contains(e.target)) {
+            _currentlyRevealed.style.transform = '';
+            const btn = _currentlyRevealed.querySelector('.delete-swipe-btn');
+            if (btn) btn.remove();
+            _currentlyRevealed = null;
+          }
+        }, true);
+      }).observe(_mainContent, { childList: true, subtree: true });
+    }
+  </script>
+
+  <script>
+    let selectedGroupMembers = [];
+
+    function openCreateGroupModal() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) { alert('Please login first.'); return; }
+
+      selectedGroupMembers = [];
+      document.getElementById('groupNameInput').value = '';
+
+      // Populate contact picker from allContacts
+      const picker = document.getElementById('groupContactPicker');
+      picker.innerHTML = '';
+      if (!allContacts || allContacts.length === 0) {
+        picker.innerHTML = '<p style="color:#8aa3a5;font-size:13px;text-align:center;">No contacts yet. Add contacts first.</p>';
+      } else {
+        allContacts.forEach(c => {
+          const displayName = c.contact_name || c.contact_phone;
+          const initial = displayName[0].toUpperCase();
+          const div = document.createElement('div');
+          div.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;border:1.5px solid #d8e8e8;cursor:pointer;transition:all 0.2s;background:#f8fafa;';
+          div.dataset.phone = c.contact_phone;
+          div.innerHTML = `
+            <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#0E4950,#2ec4b6);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;">${initial}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:600;color:#1a2e2f;font-size:14px;">${displayName}</div>
+              <div style="color:#8aa3a5;font-size:11px;">${c.contact_phone}</div>
+            </div>
+            <div class="check-icon" style="width:22px;height:22px;border-radius:50%;border:2px solid #d8e8e8;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;"></div>
+          `;
+          div.addEventListener('click', () => toggleGroupMember(div, c.contact_phone));
+          picker.appendChild(div);
+        });
+      }
+
+      const modal = document.getElementById('createGroupModal');
+      modal.style.display = 'flex';
+      setTimeout(() => document.getElementById('groupNameInput').focus(), 100);
+    }
+
+    function toggleGroupMember(div, phone) {
+      const idx = selectedGroupMembers.indexOf(phone);
+      const check = div.querySelector('.check-icon');
+      if (idx === -1) {
+        selectedGroupMembers.push(phone);
+        div.style.borderColor = '#2ec4b6';
+        div.style.background = '#f0faf9';
+        check.style.background = '#2ec4b6';
+        check.style.borderColor = '#2ec4b6';
+        check.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      } else {
+        selectedGroupMembers.splice(idx, 1);
+        div.style.borderColor = '#d8e8e8';
+        div.style.background = '#f8fafa';
+        check.style.background = 'transparent';
+        check.style.borderColor = '#d8e8e8';
+        check.innerHTML = '';
+      }
+    }
+
+    function closeCreateGroupModal() {
+      document.getElementById('createGroupModal').style.display = 'none';
+    }
+
+    let isCreatingGroup = false;
+    function submitCreateGroup() {
+      if (isCreatingGroup) return; // prevent double submission
+      const name = document.getElementById('groupNameInput').value.trim();
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!name) { alert('Please enter a group name.'); return; }
+      if (selectedGroupMembers.length === 0) { alert('Please select at least one member.'); return; }
+
+      isCreatingGroup = true;
+      const createBtn = document.querySelector('#createGroupModal button[onclick="submitCreateGroup()"]');
+      if (createBtn) { createBtn.disabled = true; createBtn.textContent = 'Creating...'; }
+
+      fetch('/api/create_group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, created_by: phone, members: selectedGroupMembers })
+      })
+      .then(r => r.json())
+      .then(data => {
+        isCreatingGroup = false;
+        if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'Create Group'; }
+        if (data.success) {
+          closeCreateGroupModal();
+          _activeContactTab = 'groups'; // land on Groups tab so the new group is visible
+          loadContacts(phone); // refresh to show new group
+        } else {
+          alert(data.error || 'Failed to create group.');
+        }
+      })
+      .catch(() => {
+        isCreatingGroup = false;
+        if (createBtn) { createBtn.disabled = false; createBtn.textContent = 'Create Group'; }
+        alert('Network error. Please try again.');
+      });
+    }
+
+    document.getElementById('createGroupModal').addEventListener('click', function(e) {
+      if (e.target === this) closeCreateGroupModal();
+    });
+  </script>
+
+  <!-- ═══════════════ PROFILE SYSTEM ═══════════════ -->
+  <style>
+    .profile-card {
+      background: white;
+      border-radius: 24px;
+      overflow: visible;
+      box-shadow: 0 4px 20px rgba(14,73,80,0.10);
+      border: 1px solid #daeaea;
+      margin-bottom: 16px;
+    }
+    .profile-banner {
+      height: 100px;
+      background: linear-gradient(135deg, #0E4950 0%, #2ec4b6 100%);
+      border-radius: 24px 24px 0 0;
+      position: relative;
+    }
+    .profile-avatar-wrap {
+      display: flex;
+      justify-content: center;
+      margin-top: -44px;
+      position: relative;
+      z-index: 2;
+      pointer-events: none; /* let touches pass through the wrap itself */
+    }
+    .profile-avatar-wrap > div {
+      pointer-events: auto; /* but re-enable on the actual avatar */
+    }
+    .profile-avatar {
+      width: 88px;
+      height: 88px;
+      border-radius: 50%;
+      border: 4px solid white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 34px;
+      font-weight: 700;
+      color: white;
+      box-shadow: 0 4px 16px rgba(14,73,80,0.3);
+      cursor: pointer;
+      transition: transform 0.2s;
+      user-select: none;
+      position: relative;
+    }
+    .profile-avatar:active { transform: scale(0.93); }
+    .profile-info-block {
+      padding: 12px 20px 16px;
+      text-align: center;
+      background: white;
+    }
+    .profile-display-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a2e2f;
+      margin-bottom: 3px;
+    }
+    .profile-phone {
+      font-size: 13px;
+      color: #8aa3a5;
+      margin-bottom: 8px;
+    }
+    .profile-bio {
+      font-size: 14px;
+      color: #4a6567;
+      line-height: 1.5;
+      min-height: 20px;
+      font-style: italic;
+    }
+    .profile-section {
+      background: white;
+      border-radius: 18px;
+      padding: 6px 0;
+      box-shadow: 0 2px 12px rgba(14,73,80,0.07);
+      border: 1px solid #daeaea;
+      margin-bottom: 14px;
+      overflow: hidden;
+      position: relative;
+      z-index: 10; /* above avatar-wrap so Edit Profile row receives taps correctly */
+    }
+    .profile-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      cursor: pointer;
+      transition: background 0.15s;
+      border-bottom: 1px solid #f0f7f7;
+    }
+    .profile-row:last-child { border-bottom: none; }
+    .profile-row:active { background: #f0f7f7; }
+    .profile-row-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .profile-row-label {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a2e2f;
+    }
+    .profile-row-sub {
+      font-size: 12px;
+      color: #8aa3a5;
+      margin-top: 1px;
+    }
+    .profile-row-chevron {
+      color: #ccd8d8;
+    }
+    /* Edit profile sheet */
+    .profile-sheet {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(10,30,30,0.55);
+      backdrop-filter: blur(6px);
+      z-index: 9500; /* must be above #profileFullOverlay (z-index:9000) */
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .profile-sheet-inner {
+      background: #fff;
+      border-radius: 28px 28px 0 0;
+      padding: 28px 22px calc(36px + env(safe-area-inset-bottom,0px));
+      width: 100%;
+      max-height: 92vh;
+      overflow-y: auto;
+      animation: slideUpFromBottom 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    .profile-input {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1.5px solid #d8e8e8;
+      border-radius: 12px;
+      font-size: 15px;
+      font-family: inherit;
+      color: #1a2e2f;
+      background: #f8fafa;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-top: 6px;
+    }
+    .profile-input:focus {
+      border-color: #0E4950;
+      box-shadow: 0 0 0 3px rgba(14,73,80,0.08);
+      background: white;
+    }
+    .color-swatch {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .color-swatch.selected {
+      border-color: #0E4950;
+      transform: scale(1.18);
+    }
+    .emoji-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1.5px solid #d8e8e8;
+      background: #f8fafa;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .emoji-btn.selected {
+      border-color: #0E4950;
+      background: #e8f5f5;
+    }
+    @keyframes slideUpFromBottom {
+      from { transform: translateY(60px); opacity: 0; }
+      to   { transform: translateY(0);    opacity: 1; }
+    }
+  </style>
+
+  <!-- Edit Profile Sheet -->
+  <div id="profileEditSheet" class="profile-sheet">
+    <div class="profile-sheet-inner">
+      <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 22px;"></div>
+      <h3 style="color:#0E4950;font-size:18px;font-weight:700;margin-bottom:20px;">Edit Profile</h3>
+
+      <!-- Avatar colour picker -->
+      <div style="margin-bottom:18px;">
+        <label style="font-size:13px;font-weight:600;color:#4a6567;">Avatar Colour</label>
+        <div id="colorSwatches" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;"></div>
+      </div>
+
+      <!-- Avatar emoji picker -->
+      <div style="margin-bottom:18px;">
+        <label style="font-size:13px;font-weight:600;color:#4a6567;">Avatar Icon <span style="font-weight:400;color:#9bb5b7;">(optional – overrides initials)</span></label>
+        <div id="emojiPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;"></div>
+      </div>
+
+      <!-- Display name -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;color:#4a6567;">Display Name</label>
+        <input id="editDisplayName" class="profile-input" type="text" placeholder="Your name" maxlength="40">
+      </div>
+
+      <!-- Bio -->
+      <div style="margin-bottom:24px;">
+        <label style="font-size:13px;font-weight:600;color:#4a6567;">Bio <span style="font-weight:400;color:#9bb5b7;">max 120 chars</span></label>
+        <textarea id="editBio" class="profile-input" rows="3" placeholder="Say something about yourself…" maxlength="120" style="resize:none;"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeProfileEdit()" style="flex:1;padding:13px;border:none;border-radius:12px;background:#eef2f2;color:#4a6567;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;">Cancel</button>
+        <button id="saveProfileBtn" onclick="saveProfile()" style="flex:2;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,#0E4950,#1a6b75);color:white;font-weight:700;font-size:14px;cursor:pointer;font-family:inherit;">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ FULL-SCREEN PROFILE OVERLAY ═══════════════ -->
+  <style>
+    #profileFullOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #eef6f6;
+      z-index: 9000;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    #profileFullOverlay.pfo-visible {
+      display: flex;
+      transform: translateX(0);
+    }
+    .pfo-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px calc(14px + env(safe-area-inset-top, 0px));
+      padding-top: calc(14px + env(safe-area-inset-top, 0px));
+      background: #fff;
+      border-bottom: 1px solid #daeaea;
+      box-shadow: 0 2px 10px rgba(14,73,80,0.07);
+      flex-shrink: 0;
+    }
+    .pfo-back-btn {
+      position: absolute;
+      top: 12px; left: 12px;
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      color: #fff;
+      flex-shrink: 0;
+      transition: background 0.15s;
+      z-index: 10;
+    }
+    .pfo-back-btn:active { background: rgba(255,255,255,0.4); }
+    .profile-banner {
+      position: relative;
+      overflow: visible;
+    }
+    .pfo-header-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0E4950;
+      flex: 1;
+    }
+    #profileOverlayBody {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 15px 15px calc(30px + env(safe-area-inset-bottom, 0px));
+    }
+  </style>
+
+  <div id="profileFullOverlay">
+
+    <div id="profileOverlayBody"></div>
+  </div>
+
+  <!-- ═══════════════ PROFILE NETWORK PAGE ═══════════════ -->
+  <style>
+    #profileNetworkPage, #profilePostsPage {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #eef6f6;
+      z-index: 9100;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateX(100%);
+      transition: transform 0.32s cubic-bezier(0.25,0.46,0.45,0.94);
+    }
+    #profileNetworkPage.pnp-visible, #profilePostsPage.pnp-visible {
+      display: flex;
+      transform: translateX(0);
+    }
+    .pnp-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-top: calc(14px + env(safe-area-inset-top, 0px));
+      padding-bottom: 14px;
+      padding-left: 16px;
+      padding-right: 16px;
+      background: #fff;
+      border-bottom: 1px solid #daeaea;
+      box-shadow: 0 2px 10px rgba(14,73,80,0.07);
+      flex-shrink: 0;
+    }
+    .pnp-body {
+      flex: 1;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+      padding: 16px 15px calc(30px + env(safe-area-inset-bottom, 0px));
+    }
+    .pnp-user-card {
+      background: white;
+      border-radius: 18px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      box-shadow: 0 2px 12px rgba(14,73,80,0.07);
+      border: 1px solid #daeaea;
+      margin-bottom: 10px;
+    }
+    .pnp-user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .pnp-post-card {
+      background: white;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 2px 12px rgba(14,73,80,0.07);
+      border: 1px solid #daeaea;
+      margin-bottom: 12px;
+    }
+    .pnp-post-img {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 10px;
+      max-height: 300px;
+      object-fit: cover;
+    }
+    .pnp-empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #9bb5b7;
+    }
+    .pnp-empty-icon { font-size: 48px; margin-bottom: 12px; }
+    .pnp-empty-text { font-size: 15px; font-weight: 600; }
+    .pnp-empty-sub { font-size: 13px; margin-top: 4px; opacity: 0.75; }
+  </style>
+
+  <div id="profileNetworkPage">
+    <div class="pnp-header">
+      <button onclick="closeProfileNetworkPage()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#0E4950;padding:4px;flex-shrink:0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span style="font-size:17px;font-weight:700;color:#0E4950;">My Network</span>
+    </div>
+    <div class="pnp-body" id="profileNetworkBody">
+      <div class="pnp-empty"><div class="pnp-empty-icon">&#128101;</div><div class="pnp-empty-text">Loading...</div></div>
+    </div>
+  </div>
+
+  <div id="profilePostsPage">
+    <div class="pnp-header">
+      <button onclick="closeProfilePostsPage()" style="background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#0E4950;padding:4px;flex-shrink:0;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <span style="font-size:17px;font-weight:700;color:#0E4950;">My Posts</span>
+    </div>
+    <div class="pnp-body" id="profilePostsBody">
+      <div class="pnp-empty"><div class="pnp-empty-icon">&#128221;</div><div class="pnp-empty-text">Loading...</div></div>
+    </div>
+  </div>
+
+  <script>
+    // ── Profile state ──────────────────────────────────────────────
+    const AVATAR_COLORS = ['#0E4950','#2ec4b6','#1a6b75','#e76f51','#f4a261','#9b5de5','#f15bb5','#00bbf9','#00f5d4','#3d405b'];
+    const AVATAR_EMOJIS = ['','😊','😎','🎯','🔥','💫','🌿','🎵','⚡','🦋','🏆','💡','🌙','🎨','🚀'];
+    let _profileData = { phone:'', display_name:'', bio:'', avatar_color:'#0E4950', avatar_emoji:'', avatar_photo:'', banner_photo:'' };
+    let _editColor = '#0E4950';
+    let _editEmoji = '';
+
+    function loadProfileTab() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      const content = document.getElementById('main-content');
+      if (!phone) {
+        content.innerHTML = `
+          <h2 style="color:#0E4950;margin-bottom:15px;">Profile</h2>
+          <div class="placeholder-content">
+            <p style="color:#666;">Please <a href="/" style="color:#0E4950;font-weight:600;">login</a> to view your profile.</p>
+          </div>`;
+        return;
+      }
+      content.innerHTML = `<div style="display:flex;justify-content:center;padding:40px 0;"><div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+
+      fetch('/api/profile?phone=' + encodeURIComponent(phone))
+        .then(r => r.json())
+        .then(data => {
+          _profileData = data;
+          // Also fetch social stats in parallel
+          fetch('/api/social/user_stats?phone=' + encodeURIComponent(phone))
+            .then(r => r.json())
+            .then(stats => renderProfileTab(data, stats))
+            .catch(() => renderProfileTab(data, {}));
+        })
+        .catch(() => {
+          content.innerHTML = `<div class="placeholder-content"><p style="color:red;">Failed to load profile.</p></div>`;
+        });
+    }
+
+    function renderProfileTab(p, stats) {
+      stats = stats || {};
+      const content = document.getElementById('main-content');
+      const initial = (p.display_name || p.phone || '?')[0].toUpperCase();
+      const avatarInner = p.avatar_emoji || initial;
+      const phone = p.phone;
+      const memberSince = p.last_online ? new Date(p.last_online).toLocaleDateString('en-IN', {month:'long', year:'numeric'}) : '—';
+
+      const avatarContent = p.avatar_photo
+        ? `<img src="${p.avatar_photo}?t=${Date.now()}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" alt="">`
+        : `<span style="font-size:34px;font-weight:700;color:white;line-height:1;">${avatarInner}</span>`;
+      const bgColor = p.avatar_color || '#0E4950';
+
+      const connections = (stats.followers || 0) + (stats.following || 0);
+      const postsCount = stats.posts || 0;
+
+      content.innerHTML = `
+        <div class="profile-card">
+          <div class="profile-banner" style="${p.banner_photo ? `background-image:url('${p.banner_photo}?t=${Date.now()}');background-size:cover;background-position:center;` : ''}">
+            <button onclick="triggerBannerPhotoInput()" title="Change banner" style="position:absolute;bottom:10px;right:12px;background:rgba(0,0,0,0.42);border:1.5px solid rgba(255,255,255,0.6);color:#fff;border-radius:20px;padding:5px 11px;display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;font-family:inherit;cursor:pointer;backdrop-filter:blur(4px);z-index:3;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3"/></svg>
+              Edit cover
+            </button>
+          </div>
+          <input type="file" id="bannerPhotoInput" accept="image/*" style="display:none" onchange="uploadBannerPhoto(this)">
+          <div class="profile-avatar-wrap">
+            <div style="position:relative;display:inline-block;">
+              <div class="profile-avatar" style="background:${p.avatar_photo ? 'transparent' : bgColor};overflow:hidden;" onclick="triggerAvatarPhotoInput()" title="Change photo">
+                ${avatarContent}
+              </div>
+              <button onclick="triggerAvatarPhotoInput()" title="Change photo" style="position:absolute;bottom:2px;right:2px;width:26px;height:26px;border-radius:50%;background:#0E4950;border:2.5px solid white;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.25);z-index:3;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="3"/></svg>
+              </button>
+            </div>
+          </div>
+          <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none" onchange="uploadAvatarPhoto(this)">
+          <div class="profile-info-block">
+            <div class="profile-display-name">${p.display_name || 'Exomnia User'}</div>
+            <div class="profile-bio">${p.bio ? escapeHtml(p.bio) : '<span style="color:#bbb;font-style:italic;">No bio yet</span>'}</div>
+          </div>
+          <div style="display:flex;border-top:1px solid #f0f0f0;margin-top:14px;border-radius:0 0 24px 24px;overflow:hidden;">
+            <div style="flex:1;text-align:center;padding:14px 8px;border-right:1px solid #f0f0f0;">
+              <div style="font-size:20px;font-weight:800;color:#0E4950;">${connections}</div>
+              <div style="font-size:11px;color:#888;font-weight:500;margin-top:2px;">Network</div>
+            </div>
+            <div style="flex:1;text-align:center;padding:14px 8px;">
+              <div style="font-size:20px;font-weight:800;color:#0E4950;">${postsCount}</div>
+              <div style="font-size:11px;color:#888;font-weight:500;margin-top:2px;">Posts</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="openProfileEdit()">
+            <div class="profile-row-icon" style="background:#e8f5f5;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E4950" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Edit Profile</div>
+              <div class="profile-row-sub">Name, bio, avatar</div>
+            </div>
+            <div class="profile-row-chevron"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+          </div>
+          <div class="profile-row" onclick="copyPhone()">
+            <div class="profile-row-icon" style="background:#fff3e0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.73a16 16 0 0 0 6.29 6.29l1.62-1.62a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Phone Number</div>
+              <div class="profile-row-sub">${phone} · tap to copy</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row">
+            <div class="profile-row-icon" style="background:#e8f0ff;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">End-to-End Encrypted</div>
+              <div class="profile-row-sub">All messages are secured</div>
+            </div>
+          </div>
+          <div class="profile-row">
+            <div class="profile-row-icon" style="background:#fce4ec;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="profile-row-label">Member Since</div>
+              <div class="profile-row-sub">${memberSince}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-section">
+          <div class="profile-row" onclick="confirmLogout()" style="color:#e53935;">
+            <div class="profile-row-icon" style="background:#fdecea;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </div>
+            <div class="profile-row-label" style="color:#e53935;">Log Out</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function copyPhone() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      navigator.clipboard.writeText(phone).then(() => {
+        showToast('Phone number copied!');
+      }).catch(() => {
+        showToast(phone);
+      });
+    }
+
+    function confirmLogout() {
+      if (confirm('Are you sure you want to log out?')) {
+        localStorage.removeItem('exomnia_user_phone');
+        window.location.href = '/';
+      }
+    }
+
+    // ── Profile Edit Sheet ──────────────────────────────────────────
+    function openProfileEdit() {
+      const p = _profileData;
+      _editColor = p.avatar_color || '#0E4950';
+      _editEmoji = p.avatar_emoji || '';
+
+      document.getElementById('editDisplayName').value = p.display_name || '';
+      document.getElementById('editBio').value = p.bio || '';
+
+      // Build colour swatches
+      const swatchContainer = document.getElementById('colorSwatches');
+      swatchContainer.innerHTML = '';
+      AVATAR_COLORS.forEach(color => {
+        const s = document.createElement('div');
+        s.className = 'color-swatch' + (color === _editColor ? ' selected' : '');
+        s.style.background = color;
+        s.title = color;
+        s.onclick = () => {
+          _editColor = color;
+          swatchContainer.querySelectorAll('.color-swatch').forEach(x => x.classList.remove('selected'));
+          s.classList.add('selected');
+        };
+        swatchContainer.appendChild(s);
+      });
+
+      // Build emoji buttons
+      const emojiContainer = document.getElementById('emojiPicker');
+      emojiContainer.innerHTML = '';
+      AVATAR_EMOJIS.forEach(em => {
+        const b = document.createElement('div');
+        b.className = 'emoji-btn' + (em === _editEmoji ? ' selected' : '');
+        b.textContent = em || '—';
+        b.title = em ? em : 'Use initials';
+        b.onclick = () => {
+          _editEmoji = em;
+          emojiContainer.querySelectorAll('.emoji-btn').forEach(x => x.classList.remove('selected'));
+          b.classList.add('selected');
+        };
+        emojiContainer.appendChild(b);
+      });
+
+      document.getElementById('profileEditSheet').style.display = 'flex';
+    }
+
+    function closeProfileEdit() {
+      document.getElementById('profileEditSheet').style.display = 'none';
+    }
+
+    function triggerAvatarPhotoInput() {
+      const inp = document.getElementById('avatarPhotoInput');
+      if (inp) inp.click();
+    }
+
+    function triggerBannerPhotoInput() {
+      const inp = document.getElementById('bannerPhotoInput');
+      if (inp) inp.click();
+    }
+
+    function uploadBannerPhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      const fd = new FormData();
+      fd.append('phone', phone);
+      fd.append('photo', file);
+      showToast('Uploading cover…');
+      fetch('/api/profile/upload_banner', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            showToast('Cover updated ✓');
+            _profileData = { ..._profileData, banner_photo: data.banner_url };
+            renderProfileOverlay(_profileData);
+          } else {
+            showToast(data.error || 'Upload failed');
+          }
+        })
+        .catch(() => showToast('Network error'));
+      input.value = '';
+    }
+
+    function uploadAvatarPhoto(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone) return;
+      const fd = new FormData();
+      fd.append('phone', phone);
+      fd.append('photo', file);
+      showToast('Uploading…');
+      fetch('/api/profile/upload_photo', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            showToast('Photo updated ✓');
+            _profileData = { ..._profileData, avatar_photo: data.photo_url };
+            renderProfileOverlay(_profileData);
+            updateHeaderProfileAvatar();
+          } else {
+            showToast(data.error || 'Upload failed');
+          }
+        })
+        .catch(() => showToast('Network error'));
+      // Reset so same file can be re-selected
+      input.value = '';
+    }
+
+    function saveProfile() {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      const btn = document.getElementById('saveProfileBtn');
+      const display_name = document.getElementById('editDisplayName').value.trim();
+      const bio = document.getElementById('editBio').value.trim();
+
+      btn.disabled = true; btn.textContent = 'Saving…';
+
+      fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, display_name, bio, avatar_color: _editColor, avatar_emoji: _editEmoji })
+      })
+      .then(r => r.json())
+      .then(data => {
+        btn.disabled = false; btn.textContent = 'Save';
+        if (data.success) {
+          closeProfileEdit();
+          showToast('Profile updated ✓');
+          _profileData = { ..._profileData, display_name, bio, avatar_color: _editColor, avatar_emoji: _editEmoji };
+          renderProfileOverlay(_profileData);
+          updateHeaderProfileAvatar();
+        } else {
+          showToast(data.error || 'Failed to save');
+        }
+      })
+      .catch(() => {
+        btn.disabled = false; btn.textContent = 'Save';
+        showToast('Network error');
+      });
+    }
+
+    document.getElementById('profileEditSheet').addEventListener('click', function(e) {
+      if (e.target === this) closeProfileEdit();
+    });
+
+    // ── Toast helper ──────────────────────────────────────────────
+    function showToast(msg) {
+      let t = document.getElementById('_toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = '_toast';
+        t.style.cssText = 'position:fixed;bottom:calc(90px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#1a2e2f;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity 0.25s;white-space:nowrap;pointer-events:none;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg;
+      t.style.opacity = '1';
+      clearTimeout(t._timer);
+      t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    //  SOCIAL NETWORK MODULE
+    // ═══════════════════════════════════════════════════════════════
+    let _socialView = 'feed'; // 'feed' | 'network' | 'requests'
+    let _socialPosts = [];
+    let _socialConnections = {}; // phone -> status
+    let _socialPendingIn = []; // incoming connection requests
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function _socialPhone() { return localStorage.getItem('exomnia_user_phone') || ''; }
+
+    function _socialAvatar(p, size) {
+      size = size || 42;
+      if (p.avatar_photo) {
+        return `<div class="social-avatar" style="width:${size}px;height:${size}px;background:transparent;overflow:hidden;">
+          <img src="${p.avatar_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">
+        </div>`;
+      }
+      const initial = (p.display_name || p.phone || '?')[0].toUpperCase();
+      const inner = p.avatar_emoji || initial;
+      const color = p.avatar_color || '#0E4950';
+      return `<div class="social-avatar" style="width:${size}px;height:${size}px;background:${color};">${inner}</div>`;
+    }
+
+    function _socialTimeAgo(ts) {
+      if (!ts) return '';
+      const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+      if (diff < 60) return 'just now';
+      if (diff < 3600) return Math.floor(diff/60) + 'm';
+      if (diff < 86400) return Math.floor(diff/3600) + 'h';
+      if (diff < 604800) return Math.floor(diff/86400) + 'd';
+      return new Date(ts).toLocaleDateString(undefined, {month:'short', day:'numeric'});
+    }
+
+    // ── Main entry ────────────────────────────────────────────────
+    function loadSocialTab() {
+      const phone = _socialPhone();
+      const content = document.getElementById('main-content');
+      if (!phone) {
+        content.innerHTML = `
+          <h2 style="color:#0E4950;margin-bottom:15px;">Social</h2>
+          <div class="placeholder-content">
+            <p>Please <a href="/" style="color:#0E4950;font-weight:600;">login</a> to access Social.</p>
+          </div>`;
+        return;
+      }
+      content.innerHTML = `
+        <div class="social-header">
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #daeaea;border-radius:12px;padding:7px 12px;gap:8px;flex:1;box-shadow:0 1px 6px rgba(14,73,80,0.07);">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#7aabae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input id="socialSearchInput" type="text" placeholder="Search people or posts…" oninput="handleSocialSearch(this.value)" style="border:none;outline:none;font-size:14px;color:#0E4950;background:transparent;width:100%;font-family:inherit;" autocomplete="off">
+            </div>
+            <button onclick="focusCreatePost()" style="flex-shrink:0;background:#0E4950;color:#fff;border:none;border-radius:12px;padding:8px 15px;font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;box-shadow:0 2px 8px rgba(14,73,80,0.25);display:flex;align-items:center;gap:5px;white-space:nowrap;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Post
+            </button>
+          </div>
+        </div>
+
+        <div class="social-tabs">
+          <button class="social-tab-btn active" id="stbFeed" onclick="switchSocialView('feed',this)">Feed</button>
+          <button class="social-tab-btn" id="stbNetwork" onclick="switchSocialView('network',this)">Network</button>
+          <button class="social-tab-btn" id="stbRequests" onclick="switchSocialView('requests',this)">Requests <span id="reqBadge"></span></button>
+        </div>
+
+        <div id="socialContent"></div>
+
+        <!-- Post creation bottom sheet modal -->
+        <div id="postCreateModal" onclick="if(event.target===this)closePostModal()">
+          <div class="post-modal-sheet">
+            <div class="post-modal-handle"></div>
+            <div class="post-modal-header">
+              <span class="post-modal-title">New Post</span>
+              <button class="post-modal-close" onclick="closePostModal()">✕</button>
+            </div>
+            <div class="create-post-row" style="margin-bottom:10px;flex:1;align-items:flex-start;">
+              <div id="cpAvatarModal" style="width:40px;height:40px;border-radius:50%;background:#0E4950;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;"></div>
+              <textarea id="newPostText" class="create-post-textarea" placeholder="Share something with your network…" rows="4" maxlength="1000" style="flex:1;min-height:220px;"></textarea>
+            </div>
+            <div id="postPhotoPreview" style="display:none;margin-bottom:10px;position:relative;">
+              <img id="postPhotoImg" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;display:block;" alt="">
+              <button onclick="clearPostPhoto()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            </div>
+            <div class="create-post-actions">
+              <label class="photo-attach-btn" for="postPhotoInput">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                Photo
+              </label>
+              <input type="file" id="postPhotoInput" accept="image/*" style="display:none" onchange="onPostPhotoSelected(this)">
+              <button class="post-submit-btn" onclick="submitPost()">Post</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Share Post bottom sheet -->
+        <div id="sharePostModal" onclick="if(event.target===this)closeShareSheet()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);backdrop-filter:blur(4px);z-index:2000;align-items:flex-end;justify-content:center;">
+          <div id="sharePostSheet" style="background:#fff;border-radius:22px 22px 0 0;width:100%;max-width:540px;padding:0 0 env(safe-area-inset-bottom,0px);box-shadow:0 -8px 40px rgba(14,73,80,0.18);animation:shareSlideUp 0.28s cubic-bezier(.4,0,.2,1);">
+            <div style="width:36px;height:4px;border-radius:3px;background:#ddd;margin:10px auto 0;"></div>
+            <div style="padding:16px 20px 4px;display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:17px;font-weight:700;color:#0E4950;">Share Post</span>
+              <button onclick="closeShareSheet()" style="background:none;border:none;font-size:20px;color:#aaa;cursor:pointer;line-height:1;">&#x2715;</button>
+            </div>
+            <div id="sharePostPreview" style="margin:10px 20px 14px;background:#f6fafa;border:1px solid #daeaea;border-radius:14px;padding:12px 14px;font-size:14px;color:#1a2e2f;line-height:1.5;max-height:80px;overflow:hidden;"></div>
+            <div style="padding:0 16px 18px;display:flex;flex-direction:column;gap:8px;">
+              <button id="shareNativeBtn" onclick="shareViaNativeAPI()" style="display:none;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:1.5px solid #daeaea;background:#fff;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;color:#0E4950;text-align:left;width:100%;">
+                <span style="width:38px;height:38px;border-radius:50%;background:#e8f5f5;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0E4950" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </span>
+                Share via&#x2026;
+              </button>
+              <button onclick="shareCopyLink()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:1.5px solid #daeaea;background:#fff;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;color:#0E4950;text-align:left;width:100%;">
+                <span style="width:38px;height:38px;border-radius:50%;background:#fff3e0;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e76f51" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                </span>
+                Copy Link
+              </button>
+              <button onclick="shareCopyText()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:1.5px solid #daeaea;background:#fff;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;color:#0E4950;text-align:left;width:100%;">
+                <span style="width:38px;height:38px;border-radius:50%;background:#e8f0ff;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5c6bc0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                </span>
+                Copy Post Text
+              </button>
+              <button onclick="openForwardToContact()" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:1.5px solid #daeaea;background:#fff;cursor:pointer;font-family:inherit;font-size:15px;font-weight:600;color:#0E4950;text-align:left;width:100%;">
+                <span style="width:38px;height:38px;border-radius:50%;background:#fce4ec;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e91e63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </span>
+                Send to Contact
+              </button>
+            </div>
+            <div id="forwardContactPanel" style="display:none;padding:0 16px 18px;">
+              <div style="font-size:13px;font-weight:600;color:#888;margin-bottom:10px;letter-spacing:0.4px;">CHOOSE A CONTACT</div>
+              <div style="background:#f6fafa;border:1.5px solid #daeaea;border-radius:12px;padding:8px 12px;display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#7aabae" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="forwardSearchInput" type="text" placeholder="Search contacts&#x2026;" oninput="filterForwardContacts(this.value)" style="border:none;outline:none;font-size:14px;background:transparent;color:#0E4950;width:100%;font-family:inherit;">
+              </div>
+              <div id="forwardContactList" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+            </div>
+          </div>
+        </div>
+        <style>@keyframes shareSlideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
+      `;
+      _socialView = 'feed';
+      loadSocialFeed();
+      loadSocialConnectionStatus();
+      loadConnectionRequests(true); // silent — just update badge
+    }
+
+    function switchSocialView(view, btn) {
+      _socialView = view;
+      document.querySelectorAll('.social-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (view === 'feed') loadSocialFeed();
+      else if (view === 'network') loadNetworkView();
+      else if (view === 'requests') loadConnectionRequests(false);
+    }
+
+    // ── QUICK POST BUTTON ─────────────────────────────────────────
+    function focusCreatePost() {
+      openPostModal();
+    }
+
+    function openPostModal() {
+      // Switch to feed view first if needed
+      if (_socialView !== 'feed') {
+        const feedBtn = document.getElementById('stbFeed');
+        if (feedBtn) switchSocialView('feed', feedBtn);
+      }
+      const modal = document.getElementById('postCreateModal');
+      if (!modal) return;
+      modal.classList.add('open');
+      // Fetch real user profile for avatar
+      const phone = _socialPhone();
+      if (phone) {
+        fetch('/api/profile?phone=' + encodeURIComponent(phone))
+          .then(r => r.json())
+          .then(p => {
+            const el = document.getElementById('cpAvatarModal');
+            if (!el) return;
+            if (p.avatar_photo) {
+              el.style.cssText = 'width:40px;height:40px;border-radius:50%;overflow:hidden;flex-shrink:0;';
+              el.innerHTML = `<img src="${p.avatar_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">`;
+            } else {
+              const initial = (p.display_name || phone || '?')[0].toUpperCase();
+              const inner = p.avatar_emoji || initial;
+              const color = p.avatar_color || '#0E4950';
+              el.style.cssText = `width:40px;height:40px;border-radius:50%;background:${color};display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;`;
+              el.innerHTML = inner;
+            }
+          }).catch(() => {});
+      }
+      // Make textarea fill available space
+      const ta = document.getElementById('newPostText');
+      if (ta) { ta.style.flex = '1'; ta.style.minHeight = '200px'; ta.focus(); }
+    }
+
+    function closePostModal() {
+      const modal = document.getElementById('postCreateModal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    // ── SEARCH ───────────────────────────────────────────────────
+    function handleSocialSearch(query) {
+      const q = query.trim();
+      const sc = document.getElementById('socialContent');
+      if (!q) {
+        switchSocialView(_socialView, document.querySelector('.social-tab-btn.active') || document.getElementById('stbFeed'));
+        return;
+      }
+      // Show loading spinner
+      if (sc) sc.innerHTML = `<div style="display:flex;justify-content:center;padding:30px 0;"><div style="width:24px;height:24px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`;
+
+      const myPhone = _socialPhone();
+      fetch('/api/social/search?phone=' + encodeURIComponent(myPhone) + '&q=' + encodeURIComponent(q))
+        .then(r => r.json())
+        .then(data => {
+          const people = data.people || [];
+          const matchedPosts = (_socialPosts || []).filter(p =>
+            (p.content && p.content.toLowerCase().includes(q.toLowerCase())) ||
+            (p.display_name && p.display_name.toLowerCase().includes(q.toLowerCase()))
+          );
+
+          let html = '';
+
+          if (people.length > 0) {
+            html += `<div style="font-weight:700;color:#0E4950;margin-bottom:10px;font-size:13px;letter-spacing:0.4px;">PEOPLE</div>`;
+            people.forEach(p => {
+              const status = p.connection_status; // 'connected','pending','none'
+              const av = p.avatar_photo
+                ? `<img src="/api/social/avatar/${p.avatar_photo}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+                : `<div style="width:44px;height:44px;border-radius:50%;background:${p.avatar_color||'#0E4950'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:17px;flex-shrink:0;">${(p.display_name||p.phone||'?')[0].toUpperCase()}</div>`;
+
+              let btnHtml = '';
+              if (status === 'connected') {
+                btnHtml = `<button onclick="disconnectUser('${p.phone}',this)" style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;background:#0E4950;color:white;white-space:nowrap;">✓ Connected</button>`;
+              } else if (status === 'pending') {
+                btnHtml = `<button disabled style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;font-family:inherit;border:none;background:#e0f0f0;color:#7aabae;white-space:nowrap;">Requested</button>`;
+              } else if (status === 'me') {
+                btnHtml = '';
+              } else {
+                btnHtml = `<button onclick="sendConnectionRequest('${p.phone}',this)" style="padding:7px 14px;border-radius:10px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;border:none;background:linear-gradient(135deg,#0E4950,#1a6b75);color:white;white-space:nowrap;box-shadow:0 3px 10px rgba(14,73,80,0.25);">+ Connect</button>`;
+              }
+
+              html += `<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:16px;padding:12px 14px;margin-bottom:8px;border:1px solid #daeaea;box-shadow:0 2px 8px rgba(14,73,80,0.05);">
+                <div onclick="openSocialProfile('${p.phone}')" style="cursor:pointer;flex-shrink:0;">${av}</div>
+                <div onclick="openSocialProfile('${p.phone}')" style="flex:1;min-width:0;cursor:pointer;">
+                  <div style="font-weight:700;color:#1a2e2f;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.display_name && p.display_name.trim() ? p.display_name : 'NEOX User')}</div>
+                  ${p.headline ? `<div style="font-size:12px;color:#0E4950;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(p.headline)}</div>` : ''}
+                  <div style="font-size:11px;color:#aac4c5;margin-top:2px;"></div>
+                </div>
+                ${btnHtml ? `<div style="flex-shrink:0;">${btnHtml}</div>` : ''}
+              </div>`;
+            });
+          }
+
+          if (matchedPosts.length > 0) {
+            html += `<div style="font-weight:700;color:#0E4950;margin:14px 0 10px;font-size:13px;letter-spacing:0.4px;">POSTS</div>`;
+            matchedPosts.forEach(p => {
+              html += `<div style="background:#fff;border-radius:14px;padding:12px 14px;margin-bottom:10px;border:1px solid #daeaea;cursor:pointer;" onclick="openSocialProfile('${p.author_phone}')">
+                <div style="font-weight:700;color:#0E4950;margin-bottom:4px;">${escapeHtml(p.display_name && p.display_name.trim() ? p.display_name : 'NEOX User')}</div>
+                <div style="font-size:14px;color:#333;line-height:1.4;">${escapeHtml(p.content)}</div>
+              </div>`;
+            });
+          }
+
+          if (!html) html = `<div class="placeholder-content"><div style="font-size:36px;margin-bottom:8px;">🔍</div><p style="color:#7aabae;">No results for "<b>${escapeHtml(q)}</b>"</p></div>`;
+          if (sc) sc.innerHTML = html;
+        })
+        .catch(() => {
+          if (sc) sc.innerHTML = `<div class="placeholder-content"><p style="color:#7aabae;">Search failed. Try again.</p></div>`;
+        });
+    }
+
+    // ── FEED ─────────────────────────────────────────────────────
+    function loadSocialFeed() {
+      const sc = document.getElementById('socialContent');
+      if (!sc) return;
+      sc.innerHTML = `<div style="display:flex;justify-content:center;padding:30px 0;"><div style="width:24px;height:24px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+
+      fetch('/api/social/feed?phone=' + encodeURIComponent(_socialPhone()))
+        .then(r => r.json())
+        .then(posts => {
+          _socialPosts = posts;
+          renderFeed(posts);
+        })
+        .catch(() => {
+          if (sc) sc.innerHTML = `<div class="placeholder-content"><p style="color:red;">Failed to load feed.</p></div>`;
+        });
+    }
+
+    function renderFeed(posts) {
+      const sc = document.getElementById('socialContent');
+      if (!sc) return;
+      const myPhone = _socialPhone();
+      let html = '';
+
+      if (!posts || posts.length === 0) {
+        html += `<div class="placeholder-content" style="margin-top:0;">
+          <div style="font-size:36px;margin-bottom:8px;">👥</div>
+          <h3 style="font-size:16px;color:#333;margin-bottom:6px;">Your feed is empty</h3>
+          <p style="font-size:13px;color:#888;">Connect with people to see their posts, or share your own update above.</p>
+        </div>`;
+      } else {
+        posts.forEach(p => { html += renderPostCard(p, myPhone); });
+      }
+      sc.innerHTML = html;
+    }
+
+    let _postPhotoFile = null;
+
+    function onPostPhotoSelected(input) {
+      const file = input.files[0];
+      if (!file) return;
+      _postPhotoFile = file;
+      const reader = new FileReader();
+      reader.onload = e => {
+        document.getElementById('postPhotoPreview').style.display = 'block';
+        document.getElementById('postPhotoImg').src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPostPhoto() {
+      _postPhotoFile = null;
+      document.getElementById('postPhotoPreview').style.display = 'none';
+      document.getElementById('postPhotoImg').src = '';
+      document.getElementById('postPhotoInput').value = '';
+    }
+
+    function submitPost() {
+      const text = (document.getElementById('newPostText') || {}).value || '';
+      if (!text.trim() && !_postPhotoFile) { showToast('Write something first!'); return; }
+      const myPhone = _socialPhone();
+      const btn = document.querySelector('#postCreateModal .post-submit-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
+
+      const fd = new FormData();
+      fd.append('phone', myPhone);
+      fd.append('content', text.trim());
+      if (_postPhotoFile) fd.append('image', _postPhotoFile);
+
+      fetch('/api/social/post', { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            showToast('Post shared! ✓');
+            _postPhotoFile = null;
+            if (btn) { btn.disabled = false; btn.textContent = 'Post'; }
+            const ta = document.getElementById('newPostText');
+            if (ta) ta.value = '';
+            clearPostPhoto();
+            closePostModal();
+            loadSocialFeed();
+          } else {
+            showToast(data.error || 'Failed to post');
+            if (btn) { btn.disabled = false; btn.textContent = 'Post'; }
+          }
+        })
+        .catch(() => {
+          showToast('Network error');
+          if (btn) { btn.disabled = false; btn.textContent = 'Post'; }
+        });
+    }
+
+    function renderPostCard(p, myPhone) {
+      const avatarHtml = _socialAvatar(p, 42);
+      const name = p.display_name && p.display_name.trim() ? p.display_name : 'NEOX User';
+      const headline = p.headline || '';
+      const timeAgo = _socialTimeAgo(p.timestamp);
+      const liked = (p.liked_by || []).includes(myPhone);
+      const likeCount = p.likes || 0;
+      const commentCount = p.comment_count || 0;
+
+      const imageHtml = p.image_path
+        ? `<img class="social-post-image" src="/api/social/image/${p.image_path}" onclick="openSocialImg(this.src)" alt="">`
+        : '';
+
+      return `
+        <div class="social-post-card" id="post_${p.id}">
+          <div class="social-post-header">
+            ${avatarHtml}
+            <div class="social-post-meta" onclick="openSocialProfile('${p.author_phone}')" style="cursor:pointer;">
+              <div class="social-post-name">${escapeHtml(name)}</div>
+              ${headline ? `<div class="social-post-headline">${escapeHtml(headline)}</div>` : ''}
+            </div>
+            <span class="social-post-time">${timeAgo}</span>
+          </div>
+          ${p.content ? `<div class="social-post-content">${escapeHtml(p.content)}</div>` : ''}
+          ${imageHtml}
+          <div class="social-post-actions">
+            <button class="social-action-btn ${liked ? 'liked' : ''}" onclick="toggleLike(${p.id},this)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="${liked ? 'rgba(231,111,81,0.2)' : 'none'}" stroke="${liked ? '#e76f51' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              <span id="likeCount_${p.id}">${likeCount}</span>
+            </button>
+            <button class="social-action-btn" onclick="toggleComments(${p.id})">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span id="commentCount_${p.id}">${commentCount}</span>
+            </button>
+            <button class="social-action-btn" onclick="openShareSheet(${p.id})" title="Share post">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
+            ${p.author_phone === myPhone ? `
+            <button class="social-action-btn" onclick="deletePost(${p.id})" style="margin-left:auto;color:#e53935;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e53935" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>` : ''}
+          </div>
+          <div id="comments_${p.id}" style="display:none;"></div>
+        </div>`;
+    }
+
+    function toggleLike(postId, btn) {
+      const myPhone = _socialPhone();
+      const countEl = document.getElementById('likeCount_' + postId);
+      const liked = btn.classList.contains('liked');
+      btn.classList.toggle('liked');
+      const svg = btn.querySelector('svg');
+      if (!liked) {
+        svg.setAttribute('fill', 'rgba(231,111,81,0.2)');
+        svg.setAttribute('stroke', '#e76f51');
+        if (countEl) countEl.textContent = parseInt(countEl.textContent || 0) + 1;
+      } else {
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        if (countEl) countEl.textContent = Math.max(0, parseInt(countEl.textContent || 1) - 1);
+      }
+      fetch('/api/social/like', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ post_id: postId, phone: myPhone })
+      }).catch(() => {});
+    }
+
+    function toggleComments(postId) {
+      const div = document.getElementById('comments_' + postId);
+      if (!div) return;
+      if (div.style.display !== 'none' && div.dataset.loaded) {
+        div.style.display = 'none';
+        return;
+      }
+      div.style.display = 'block';
+      div.dataset.loaded = '1';
+      loadComments(postId);
+    }
+
+    function loadComments(postId) {
+      const div = document.getElementById('comments_' + postId);
+      if (!div) return;
+      div.innerHTML = `<div class="social-comments-section"><div style="text-align:center;padding:10px;"><div style="width:18px;height:18px;border:2px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></div></div></div>`;
+      fetch('/api/social/comments?post_id=' + postId)
+        .then(r => r.json())
+        .then(comments => {
+          renderComments(postId, comments);
+        })
+        .catch(() => {
+          div.innerHTML = '';
+        });
+    }
+
+    function _relTime(ts) {
+      if (!ts) return '';
+      const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+      if (diff < 60)   return 'just now';
+      if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+      if (diff < 86400)return Math.floor(diff/3600) + 'h ago';
+      return Math.floor(diff/86400) + 'd ago';
+    }
+
+    function renderComments(postId, comments) {
+      const div = document.getElementById('comments_' + postId);
+      if (!div) return;
+      let html = '<div class="social-comments-section">';
+      if (comments.length > 0) {
+        html += `<div class="comments-header">${comments.length} Comment${comments.length !== 1 ? 's' : ''}</div>`;
+        comments.forEach((c, i) => {
+          const name = c.display_name && c.display_name.trim() ? c.display_name : 'NEOX User';
+          const avatarHtml = _socialAvatar(c, 32);
+          const timeStr = _relTime(c.created_at || c.timestamp);
+          html += `<div class="social-comment-item" style="animation-delay:${i*0.04}s">
+            ${avatarHtml}
+            <div class="social-comment-bubble">
+              <div class="scb-inner">
+                <div class="social-comment-author">${escapeHtml(name)}</div>
+                <div class="social-comment-text">${escapeHtml(c.content)}</div>
+              </div>
+              <div class="social-comment-meta">
+                ${timeStr ? `<span class="social-comment-time">${timeStr}</span>` : ''}
+              </div>
+            </div>
+          </div>`;
+        });
+      } else {
+        html += '<div class="no-comments">No comments yet — be the first!</div>';
+      }
+      html += `<div class="social-comment-input-row">
+        <div class="comment-input-shell">
+          <input type="text" class="social-comment-input" id="commentInput_${postId}"
+            placeholder="Add a comment…" maxlength="500"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendComment(${postId});}
+                       document.getElementById('sendBtn_${postId}').disabled=!this.value.trim();">
+        </div>
+        <button class="social-comment-send" id="sendBtn_${postId}" disabled onclick="sendComment(${postId})" title="Post comment">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div></div>`;
+      div.innerHTML = html;
+      // Re-attach live enable/disable after innerHTML set
+      const inp = document.getElementById('commentInput_' + postId);
+      const btn = document.getElementById('sendBtn_' + postId);
+      if (inp && btn) {
+        inp.addEventListener('input', () => { btn.disabled = !inp.value.trim(); });
+      }
+    }
+
+    function sendComment(postId) {
+      const input = document.getElementById('commentInput_' + postId);
+      const btn   = document.getElementById('sendBtn_' + postId);
+      if (!input || !input.value.trim()) return;
+      const myPhone = _socialPhone();
+      const text = input.value.trim();
+      input.value = '';
+      if (btn) btn.disabled = true;
+      // Optimistic count bump
+      const cc = document.getElementById('commentCount_' + postId);
+      if (cc) cc.textContent = parseInt(cc.textContent || 0) + 1;
+      fetch('/api/social/comment', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ post_id: postId, phone: myPhone, content: text })
+      }).then(r => r.json()).then(() => {
+        loadComments(postId);
+      }).catch(() => {
+        // Roll back count on failure
+        if (cc) cc.textContent = Math.max(0, parseInt(cc.textContent || 1) - 1);
+        if (btn) btn.disabled = false;
+        input.value = text;
+      });
+    }
+
+    function deletePost(postId) {
+      if (!confirm('Delete this post?')) return;
+      fetch('/api/social/post/delete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ post_id: postId, phone: _socialPhone() })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          const el = document.getElementById('post_' + postId);
+          if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
+          showToast('Post deleted');
+        }
+      }).catch(() => {});
+    }
+
+    // ── SHARE POST ────────────────────────────────────────────────
+    let _sharePostData = null; // { id, content, author, display_name }
+    let _allContactsCache = null;
+
+    function openShareSheet(postId) {
+      // Find post data from cached feed
+      const post = (_socialPosts || []).find(p => p.id === postId);
+      _sharePostData = post ? { id: post.id, content: post.content, author: post.author_phone, display_name: (post.display_name && post.display_name.trim()) ? post.display_name : 'NEOX User' } : { id: postId, content: '', author: '', display_name: 'NEOX User' };
+
+      const modal = document.getElementById('sharePostModal');
+      if (!modal) return;
+
+      // Show preview text
+      const preview = document.getElementById('sharePostPreview');
+      if (preview) {
+        const authorName = _sharePostData.display_name;
+        preview.innerHTML = `<span style="font-weight:700;color:#0E4950;">${escapeHtml(authorName)}</span>` +
+          (_sharePostData.content ? `<br><span style="color:#4a6567;">${escapeHtml(_sharePostData.content.slice(0, 120))}${_sharePostData.content.length > 120 ? '…' : ''}</span>` : '');
+      }
+
+      // Show native share button only if Web Share API available
+      const nativeBtn = document.getElementById('shareNativeBtn');
+      if (nativeBtn) nativeBtn.style.display = navigator.share ? 'flex' : 'none';
+
+      // Hide forward panel initially
+      const fcp = document.getElementById('forwardContactPanel');
+      if (fcp) fcp.style.display = 'none';
+      const fsi = document.getElementById('forwardSearchInput');
+      if (fsi) fsi.value = '';
+
+      modal.style.display = 'flex';
+    }
+
+    function closeShareSheet() {
+      const modal = document.getElementById('sharePostModal');
+      if (modal) modal.style.display = 'none';
+      _sharePostData = null;
+    }
+
+    function _buildShareText(post) {
+      const name = (post.display_name && post.display_name.trim()) ? post.display_name : 'NEOX User';
+      const content = post.content || '';
+      const link = window.location.origin + '/social/post/' + post.id;
+      return (content ? `"${content}"\n— ${name} on Exomnia\n` : `Post by ${name} on Exomnia\n`) + link;
+    }
+
+    function shareViaNativeAPI() {
+      if (!_sharePostData || !navigator.share) return;
+      const text = _buildShareText(_sharePostData);
+      navigator.share({ text: text }).catch(() => {});
+      closeShareSheet();
+    }
+
+    function shareCopyLink() {
+      if (!_sharePostData) return;
+      const link = window.location.origin + '/social/post/' + _sharePostData.id;
+      navigator.clipboard.writeText(link).then(() => {
+        showToast('Link copied!');
+      }).catch(() => {
+        // Fallback: prompt with text
+        prompt('Copy this link:', link);
+      });
+      closeShareSheet();
+    }
+
+    function shareCopyText() {
+      if (!_sharePostData) return;
+      const text = _buildShareText(_sharePostData);
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Post text copied!');
+      }).catch(() => {
+        prompt('Copy this text:', text);
+      });
+      closeShareSheet();
+    }
+
+    function openForwardToContact() {
+      const panel = document.getElementById('forwardContactPanel');
+      if (!panel) return;
+      panel.style.display = 'block';
+      // Load contacts list
+      _loadForwardContacts();
+    }
+
+    function _loadForwardContacts() {
+      const myPhone = _socialPhone();
+      const listEl = document.getElementById('forwardContactList');
+      if (!listEl) return;
+
+      if (_allContactsCache) {
+        _renderForwardContacts(_allContactsCache, '');
+        return;
+      }
+
+      listEl.innerHTML = '<div style="text-align:center;padding:12px;"><div style="width:18px;height:18px;border:2px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block;"></div></div>';
+
+      fetch('/api/contacts?phone=' + encodeURIComponent(myPhone))
+        .then(r => r.json())
+        .then(data => {
+          _allContactsCache = data.contacts || data || [];
+          _renderForwardContacts(_allContactsCache, '');
+        })
+        .catch(() => {
+          listEl.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:12px;">Could not load contacts.</div>';
+        });
+    }
+
+    function filterForwardContacts(query) {
+      if (!_allContactsCache) return;
+      _renderForwardContacts(_allContactsCache, query.trim().toLowerCase());
+    }
+
+    function _renderForwardContacts(contacts, query) {
+      const listEl = document.getElementById('forwardContactList');
+      if (!listEl) return;
+      const filtered = query
+        ? contacts.filter(c => (c.contact_name || c.phone || '').toLowerCase().includes(query) || (c.contact_phone || c.phone || '').includes(query))
+        : contacts;
+
+      if (!filtered.length) {
+        listEl.innerHTML = '<div style="color:#aaa;font-size:13px;text-align:center;padding:12px;">No contacts found.</div>';
+        return;
+      }
+
+      listEl.innerHTML = filtered.slice(0, 30).map(c => {
+        const name = c.contact_name || c.display_name || c.contact_phone || c.phone || '';
+        const phone = c.contact_phone || c.phone || '';
+        const initial = name[0] ? name[0].toUpperCase() : '?';
+        return `<button onclick="forwardPostToContact('${phone}','${escapeHtml(name)}')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid #eee;background:#fff;cursor:pointer;font-family:inherit;text-align:left;width:100%;">
+          <div style="width:36px;height:36px;border-radius:50%;background:#0E4950;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0;">${initial}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:600;color:#1a2e2f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(name)}</div>
+            <div style="font-size:11px;color:#aac4c5;">${phone}</div>
+          </div>
+        </button>`;
+      }).join('');
+    }
+
+    function forwardPostToContact(contactPhone, contactName) {
+      if (!_sharePostData) return;
+      const myPhone = _socialPhone();
+      const text = _buildShareText(_sharePostData);
+
+      fetch('/api/send_message', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ sender: myPhone, receiver: contactPhone, message: text, message_type: 'text' })
+      }).then(r => r.json()).then(data => {
+        if (data.success !== false) {
+          showToast('Sent to ' + (contactName || contactPhone) + '!');
+        } else {
+          showToast('Failed to send.');
+        }
+      }).catch(() => showToast('Failed to send.'));
+
+      closeShareSheet();
+    }
+
+    function openSocialImg(src) {
+      const v = document.getElementById('socialImgViewer');
+      document.getElementById('socialImgViewerImg').src = src;
+      v.classList.add('open');
+    }
+    function closeSocialImgViewer() {
+      document.getElementById('socialImgViewer').classList.remove('open');
+    }
+
+    // ── NETWORK VIEW ─────────────────────────────────────────────
+    function loadSocialConnectionStatus() {
+      const myPhone = _socialPhone();
+      fetch('/api/social/connections?phone=' + encodeURIComponent(myPhone))
+        .then(r => r.json())
+        .then(data => {
+          _socialConnections = {};
+          (data.following || []).forEach(p => { _socialConnections[p] = 'following'; });
+          (data.followers || []).forEach(p => {
+            if (!_socialConnections[p]) _socialConnections[p] = 'follower';
+            else _socialConnections[p] = 'connected';
+          });
+          (data.pending_out || []).forEach(p => { _socialConnections[p] = 'pending'; });
+        }).catch(() => {});
+    }
+
+    function loadNetworkView() {
+      const sc = document.getElementById('socialContent');
+      if (!sc) return;
+      sc.innerHTML = `<div style="display:flex;justify-content:center;padding:30px 0;"><div style="width:24px;height:24px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>`;
+      fetch('/api/social/people?phone=' + encodeURIComponent(_socialPhone()))
+        .then(r => r.json())
+        .then(people => renderNetworkView(people))
+        .catch(() => { if (sc) sc.innerHTML = `<div class="placeholder-content"><p style="color:red;">Failed to load.</p></div>`; });
+    }
+
+    function renderNetworkView(people) {
+      const sc = document.getElementById('socialContent');
+      if (!sc) return;
+      const myPhone = _socialPhone();
+      let html = `<p style="font-size:12px;color:#7aabae;margin-bottom:12px;font-weight:600;">PEOPLE YOU MAY KNOW</p>`;
+      if (!people || people.length === 0) {
+        html += `<div class="placeholder-content"><div style="font-size:36px;margin-bottom:8px;">🌐</div><p style="color:#888;">No suggestions yet. Add more contacts!</p></div>`;
+      } else {
+        people.forEach(p => {
+          const status = _socialConnections[p.phone] || 'none';
+          const name = p.display_name || 'Exomnia User';
+          const avatarHtml = _socialAvatar(p, 48);
+          const btnLabel = status === 'connected' ? '✓ Connected'
+            : status === 'following' ? 'Following'
+            : status === 'pending' ? 'Requested'
+            : 'Connect';
+          const btnClass = status === 'connected' || status === 'following' ? 'connected'
+            : status === 'pending' ? 'pending' : '';
+          html += `<div class="people-card">
+            <div onclick="openSocialProfile('${p.phone}')" style="cursor:pointer;">${avatarHtml}</div>
+            <div class="people-info" onclick="openSocialProfile('${p.phone}')" style="cursor:pointer;">
+              <div class="people-name">${escapeHtml(name)}</div>
+              <div class="people-headline">${escapeHtml(p.headline || p.bio || '')}</div>
+            </div>
+            <button class="connect-btn ${btnClass}" id="connBtn_${p.phone.replace(/\\+/g,'_')}"
+              onclick="sendConnectionRequest('${p.phone}',this)"
+              ${status === 'pending' || status === 'connected' || status === 'following' ? 'disabled' : ''}
+            >${btnLabel}</button>
+          </div>`;
+        });
+      }
+      sc.innerHTML = html;
+    }
+
+    function sendConnectionRequest(targetPhone, btn) {
+      const myPhone = _socialPhone();
+      if (btn) { btn.disabled = true; btn.textContent = 'Requested'; btn.classList.add('pending'); }
+      _socialConnections[targetPhone] = 'pending';
+      fetch('/api/social/connect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ from_phone: myPhone, to_phone: targetPhone })
+      }).then(r => r.json()).then(data => {
+        if (!data.success) {
+          showToast(data.error || 'Failed');
+          if (btn) { btn.disabled = false; btn.textContent = 'Connect'; btn.classList.remove('pending'); }
+        } else {
+          showToast('Request sent!');
+        }
+      }).catch(() => {
+        if (btn) { btn.disabled = false; btn.textContent = 'Connect'; btn.classList.remove('pending'); }
+      });
+    }
+
+    function disconnectUser(targetPhone, btn) {
+      if (!confirm('Disconnect from this person?')) return;
+      const myPhone = _socialPhone();
+      if (btn) { btn.disabled = true; btn.textContent = 'Disconnecting…'; }
+      delete _socialConnections[targetPhone];
+      fetch('/api/social/disconnect', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ from_phone: myPhone, to_phone: targetPhone })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          showToast('Disconnected');
+          if (btn) {
+            btn.disabled = false;
+            btn.textContent = '+ Connect';
+            btn.style.background = 'linear-gradient(135deg,#0E4950,#1a6b75)';
+            btn.style.color = 'white';
+            btn.style.boxShadow = '0 4px 14px rgba(14,73,80,0.28)';
+            btn.style.cursor = 'pointer';
+            btn.onclick = function(){ sendConnectionRequest(targetPhone, btn); };
+          }
+        } else {
+          showToast(data.error || 'Failed to disconnect');
+          if (btn) { btn.disabled = false; btn.textContent = '✓ Connected'; }
+          _socialConnections[targetPhone] = 'connected';
+        }
+      }).catch(() => {
+        showToast('Failed to disconnect');
+        if (btn) { btn.disabled = false; btn.textContent = '✓ Connected'; }
+        _socialConnections[targetPhone] = 'connected';
+      });
+    }
+
+    // ── CONNECTION REQUESTS ───────────────────────────────────────
+    function loadConnectionRequests(silent) {
+      const myPhone = _socialPhone();
+      fetch('/api/social/requests?phone=' + encodeURIComponent(myPhone))
+        .then(r => r.json())
+        .then(reqs => {
+          _socialPendingIn = reqs;
+          const badge = document.getElementById('reqBadge');
+          if (badge) badge.textContent = reqs.length ? ` (${reqs.length})` : '';
+          if (!silent) renderRequestsView(reqs);
+        }).catch(() => {});
+    }
+
+    function renderRequestsView(reqs) {
+      const sc = document.getElementById('socialContent');
+      if (!sc) return;
+      let html = `<p style="font-size:12px;color:#7aabae;margin-bottom:12px;font-weight:600;">PENDING CONNECTION REQUESTS</p>`;
+      if (!reqs || reqs.length === 0) {
+        html += `<div class="placeholder-content"><div style="font-size:36px;margin-bottom:8px;">🤝</div><p style="color:#888;">No pending requests</p></div>`;
+      } else {
+        reqs.forEach(r => {
+          const name = r.display_name || 'Exomnia User';
+          const avatarHtml = _socialAvatar(r, 44);
+          html += `<div class="conn-req-card" id="req_${r.phone.replace(/\\+/g,'_')}">
+            <div onclick="openSocialProfile('${r.phone}')" style="cursor:pointer;">${avatarHtml}</div>
+            <div class="people-info" onclick="openSocialProfile('${r.phone}')" style="cursor:pointer;">
+              <div class="people-name">${escapeHtml(name)}</div>
+              <div class="people-headline">${escapeHtml(r.headline || r.bio || '')}</div>
+            </div>
+            <div class="conn-req-actions">
+              <button class="accept-btn" onclick="respondRequest('${r.phone}','accept',this)">Accept</button>
+              <button class="decline-btn" onclick="respondRequest('${r.phone}','decline',this)">✕</button>
+            </div>
+          </div>`;
+        });
+      }
+      sc.innerHTML = html;
+    }
+
+    function respondRequest(fromPhone, action, btn) {
+      const myPhone = _socialPhone();
+      fetch('/api/social/respond', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ from_phone: fromPhone, to_phone: myPhone, action })
+      }).then(r => r.json()).then(data => {
+        if (data.success) {
+          const el = document.getElementById('req_' + fromPhone.replace(/\\+/g,'_'));
+          if (el) { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }
+          showToast(action === 'accept' ? 'Connected! ✓' : 'Request declined');
+          if (action === 'accept') { _socialConnections[fromPhone] = 'connected'; }
+          const badge = document.getElementById('reqBadge');
+          _socialPendingIn = _socialPendingIn.filter(r => r.phone !== fromPhone);
+          if (badge) badge.textContent = _socialPendingIn.length ? ` (${_socialPendingIn.length})` : '';
+        }
+      }).catch(() => {});
+    }
+
+    // ── SOCIAL PROFILE OVERLAY ────────────────────────────────────
+    function openSocialProfile(phone) {
+      const overlay = document.getElementById('socialProfileOverlay');
+      overlay.style.display = 'flex';
+      setTimeout(() => overlay.classList.add('spo-visible'), 10);
+      renderSocialProfileLoading();
+      const myPhone = _socialPhone();
+      Promise.all([
+        fetch('/api/profile?phone=' + encodeURIComponent(phone)).then(r => r.json()),
+        fetch('/api/social/user_posts?phone=' + encodeURIComponent(phone) + '&viewer=' + encodeURIComponent(myPhone)).then(r => r.json()),
+        fetch('/api/social/user_stats?phone=' + encodeURIComponent(phone)).then(r => r.json())
+      ]).then(([profile, posts, stats]) => {
+        renderSocialProfile(profile, posts, stats, phone);
+      }).catch(() => {
+        document.getElementById('socialProfileBody').innerHTML = `<div style="padding:40px;text-align:center;color:red;">Failed to load profile.</div>`;
+      });
+    }
+
+    function closeSocialProfile() {
+      const overlay = document.getElementById('socialProfileOverlay');
+      overlay.classList.remove('spo-visible');
+      setTimeout(() => { overlay.style.display = 'none'; }, 320);
+    }
+
+    function renderSocialProfileLoading() {
+      document.getElementById('socialProfileBody').innerHTML = `
+        <div style="display:flex;justify-content:center;padding:60px 0;">
+          <div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div>
+        </div>`;
+    }
+
+    function renderSocialProfile(p, posts, stats, profilePhone) {
+      const myPhone = _socialPhone();
+      const isMe = profilePhone === myPhone;
+      const initial = (p.display_name || p.phone || '?')[0].toUpperCase();
+      const avatarInner = p.avatar_emoji || initial;
+      const bgColor = p.avatar_color || '#0E4950';
+      const avatarContent = p.avatar_photo
+        ? `<img src="${p.avatar_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;" alt="">`
+        : `<span style="font-size:30px;font-weight:800;color:white;line-height:1;">${avatarInner}</span>`;
+
+      const status = _socialConnections[profilePhone];
+      const connBtnHtml = isMe ? `
+        <div style="font-size:12px;color:#7aabae;font-weight:600;padding:8px 16px;border:1.5px solid #daeaea;border-radius:10px;display:inline-block;">Your Profile</div>`
+        : `<button
+            id="spConnBtn"
+            onclick="${status === 'connected' || status === 'following' ? `disconnectUser('${profilePhone}',this)` : `sendConnectionRequest('${profilePhone}',this)`}"
+            ${status === 'pending' ? 'disabled' : ''}
+            style="padding:10px 22px;border-radius:12px;font-size:14px;font-weight:700;font-family:inherit;cursor:${status === 'pending' ? 'default' : 'pointer'};border:none;
+              background:${status === 'connected' || status === 'following' ? '#0E4950' : status === 'pending' ? '#e0f0f0' : 'linear-gradient(135deg,#0E4950,#1a6b75)'};
+              color:${status === 'pending' ? '#7aabae' : 'white'};
+              box-shadow:${status === 'connected' || status === 'following' ? 'none' : '0 4px 14px rgba(14,73,80,0.28)'};">
+            ${status === 'connected' ? '✓ Connected' : status === 'following' ? '✓ Following' : status === 'pending' ? 'Requested…' : '+ Connect'}
+          </button>`;
+
+      let postsHtml = '';
+      if (!posts || posts.length === 0) {
+        postsHtml = `
+          <div style="text-align:center;padding:36px 20px;background:white;border-radius:16px;border:1px solid #daeaea;">
+            <div style="font-size:36px;margin-bottom:8px;">📝</div>
+            <div style="color:#888;font-size:14px;font-weight:600;">No posts yet</div>
+          </div>`;
+      } else {
+        posts.forEach(post => { postsHtml += renderPostCard(post, myPhone); });
+      }
+
+      document.getElementById('socialProfileBody').innerHTML = `
+        <!-- Banner + Avatar -->
+        <div style="background:white;border-radius:20px;overflow:hidden;margin-bottom:12px;box-shadow:0 3px 14px rgba(14,73,80,0.09);border:1px solid #daeaea;">
+          <!-- Banner -->
+          <div style="height:105px;${p.banner_photo
+            ? `background-image:url('${p.banner_photo}');background-size:cover;background-position:center;`
+            : 'background:linear-gradient(135deg,#0E4950 0%,#2ec4b6 100%);'}"></div>
+
+          <!-- Avatar sits below banner, not overlapping -->
+          <div style="padding:16px 18px 18px;display:flex;flex-direction:column;gap:14px;">
+
+            <!-- Row: avatar left, connect btn right -->
+            <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:-52px;">
+              <div style="width:82px;height:82px;border-radius:50%;
+                background:${p.avatar_photo ? 'transparent' : bgColor};
+                display:flex;align-items:center;justify-content:center;
+                overflow:hidden;border:4px solid white;
+                box-shadow:0 4px 16px rgba(14,73,80,0.22);flex-shrink:0;">
+                ${avatarContent}
+              </div>
+              <div style="padding-bottom:4px;">${connBtnHtml}</div>
+            </div>
+
+            <!-- Name, tag, headline, bio -->
+            <div>
+              <div style="font-size:22px;font-weight:800;color:#1a2e2f;line-height:1.2;">
+                ${escapeHtml(p.display_name && p.display_name.trim() ? p.display_name : (p.user_tag || 'NEOX User'))}
+              </div>
+              ${p.user_tag ? `<div style="font-size:13px;color:#2ec4b6;font-weight:700;margin-top:3px;">${escapeHtml(p.user_tag)}</div>` : ''}
+              ${p.headline ? `<div style="font-size:14px;color:#4a6567;margin-top:6px;line-height:1.4;">${escapeHtml(p.headline)}</div>` : ''}
+              ${p.bio && p.bio !== p.headline ? `<div style="font-size:13px;color:#7aabae;margin-top:6px;line-height:1.5;">${escapeHtml(p.bio)}</div>` : ''}
+              ${p.location ? `<div style="font-size:12px;color:#aac4c5;margin-top:6px;display:flex;align-items:center;gap:4px;">📍 ${escapeHtml(p.location)}</div>` : ''}
+              ${p.website ? `<div style="font-size:12px;margin-top:4px;"><a href="${escapeHtml(p.website)}" target="_blank" style="color:#0E4950;font-weight:600;text-decoration:none;">🔗 ${escapeHtml(p.website)}</a></div>` : ''}
+            </div>
+
+            <!-- Stats row inside the card -->
+            <div style="display:flex;border-top:1px solid #f0f7f7;padding-top:14px;gap:0;">
+              <div style="flex:1;text-align:center;border-right:1px solid #f0f7f7;">
+                <div style="font-size:20px;font-weight:800;color:#0E4950;">${(stats.followers || 0) + (stats.following || 0)}</div>
+                <div style="font-size:11px;color:#7aabae;font-weight:600;margin-top:2px;">Network</div>
+              </div>
+              <div style="flex:1;text-align:center;">
+                <div style="font-size:20px;font-weight:800;color:#0E4950;">${stats.posts || 0}</div>
+                <div style="font-size:11px;color:#7aabae;font-weight:600;margin-top:2px;">Posts</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Posts section -->
+        <p style="font-size:11px;color:#7aabae;font-weight:700;letter-spacing:0.5px;margin-bottom:10px;">POSTS</p>
+        ${postsHtml}
+      `;
+    }
+
+  </script>
+
+  <!-- ── Live notification system: alerts the user to every new message, ── -->
+  <!-- ── whether it's a DM or a group message, from anywhere in the app ── -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" crossorigin="anonymous"></script>
+  <script>
+  (function() {
+    function playNotifSound() {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(880, ctx.currentTime);
+        o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+        g.gain.setValueAtTime(0.0001, ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(); o.stop(ctx.currentTime + 0.35);
+      } catch(e) {}
+    }
+
+    function ensureToastContainer() {
+      let c = document.getElementById('exomnia-notif-toast-container');
+      if (!c) {
+        c = document.createElement('div');
+        c.id = 'exomnia-notif-toast-container';
+        c.style.cssText = 'position:fixed;top:max(12px,env(safe-area-inset-top,0px));left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:99999;pointer-events:none;';
+        document.body.appendChild(c);
+      }
+      return c;
+    }
+
+    // One toast per conversation, kept up to date as more messages arrive —
+    // instead of stacking a new banner per message (which floods the screen
+    // when someone sends a lot of messages quickly). Capped at a handful of
+    // conversations visible at once, just like a real messaging app.
+    const _activeToasts = {};
+    let _toastOrder = [];
+    const MAX_VISIBLE_TOASTS = 3;
+
+    function _dismissToast(key, immediate) {
+      const entry = _activeToasts[key];
+      if (!entry) return;
+      clearTimeout(entry.timer);
+      delete _activeToasts[key];
+      _toastOrder = _toastOrder.filter(k => k !== key);
+      const el = entry.el;
+      if (immediate) { el.remove(); return; }
+      el.style.transform = 'translateY(-20px)';
+      el.style.opacity = '0';
+      setTimeout(() => el.remove(), 250);
+    }
+
+    function showNotifToast(key, title, body, onClick) {
+      const container = ensureToastContainer();
+      const existing = _activeToasts[key];
+
+      if (existing) {
+        existing.count++;
+        existing.onClick = onClick;
+        existing.el.querySelector('.exo-toast-title').textContent = title + (existing.count > 1 ? ' (' + existing.count + ')' : '');
+        existing.el.querySelector('.exo-toast-body').textContent = body;
+        clearTimeout(existing.timer);
+        existing.timer = setTimeout(() => _dismissToast(key), 4000);
+        container.prepend(existing.el);
+        return;
+      }
+
+      while (_toastOrder.length >= MAX_VISIBLE_TOASTS) {
+        _dismissToast(_toastOrder[0], true);
+      }
+
+      const toast = document.createElement('div');
+      toast.style.cssText = 'pointer-events:auto;cursor:pointer;max-width:92vw;width:340px;background:#0E4950;color:white;border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,0.25);padding:12px 14px;display:flex;align-items:center;gap:10px;transform:translateY(-20px);opacity:0;transition:transform 0.25s ease, opacity 0.25s ease;';
+      const letter = (title || '?').trim()[0]?.toUpperCase() || '?';
+      toast.innerHTML =
+        '<div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#2ec4b6,#0E4950);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0;">' + letter + '</div>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="exo-toast-title" style="font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + title + '</div>' +
+          '<div class="exo-toast-body" style="font-size:12.5px;color:#cfe8e8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + body + '</div>' +
+        '</div>';
+      toast.addEventListener('click', () => {
+        const entry = _activeToasts[key];
+        if (entry && entry.onClick) entry.onClick();
+        _dismissToast(key, true);
+      });
+      container.appendChild(toast);
+      requestAnimationFrame(() => { toast.style.transform = 'translateY(0)'; toast.style.opacity = '1'; });
+      const timer = setTimeout(() => _dismissToast(key), 4000);
+      _activeToasts[key] = { el: toast, count: 1, timer, onClick };
+      _toastOrder.push(key);
+    }
+
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+
+    function showOSNotification(key, title, body, onClick) {
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      try {
+        // Stable tag per conversation: the OS replaces the previous
+        // notification for this chat instead of stacking a new one for
+        // every message, mirroring how WhatsApp/Messenger group alerts.
+        const n = new Notification(title, { body: body, tag: 'exomnia-' + key });
+        n.onclick = function() { window.focus(); if (onClick) onClick(); n.close(); };
+      } catch(e) {}
+    }
+
+    const _origTitle = document.title;
+    let _unread = 0;
+    function bumpTitleBadge() { _unread++; document.title = '(' + _unread + ') ' + _origTitle; }
+    function clearTitleBadge() { _unread = 0; document.title = _origTitle; }
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') clearTitleBadge();
+    });
+
+    // Exposed globally so the chat and group-chat pages can reuse it too,
+    // passing `suppress=true` when the notification is for the conversation
+    // the user already has open (since they're already seeing the message).
+    window.exomniaNotify = function(data, suppress) {
+      if (suppress) return;
+      const myPhone = localStorage.getItem('exomnia_user_phone');
+      if (String(data.sender) === String(myPhone)) return;
+
+      // De-duplicate: the same message should never produce more than
+      // one notification, even with multiple tabs open or a socket
+      // reconnect blip causing the event to be received twice.
+      if (data.id) {
+        let seen = [];
+        try { seen = JSON.parse(localStorage.getItem('exomnia_seen_notifs') || '[]'); } catch(e) { seen = []; }
+        if (seen.indexOf(data.id) !== -1) return;
+        seen.push(data.id);
+        if (seen.length > 60) seen = seen.slice(-60);
+        try { localStorage.setItem('exomnia_seen_notifs', JSON.stringify(seen)); } catch(e) {}
+      }
+
+      // Update everything about this conversation's row in real time —
+      // preview text, timestamp, unread badge, and bump it to the top —
+      // not just the unread count.
+      _liveUpdateRow(data);
+
+      let title, body, url, key;
+      if (data.type === 'group') {
+        title = data.group_name || 'Group';
+        body  = (data.sender_name || data.sender) + ': ' + (data.preview || '');
+        url   = '/group/' + data.group_id + '?phone=' + encodeURIComponent(myPhone);
+        key   = 'group:' + data.group_id;
+      } else {
+        title = data.sender_name || data.sender;
+        body  = data.preview || '';
+        url   = '/chat/' + encodeURIComponent(data.sender) + '?phone=' + encodeURIComponent(myPhone);
+        key   = 'dm:' + data.sender;
+      }
+
+      showNotifToast(key, title, body, () => { window.location.href = url; });
+      playNotifSound();
+      if (document.visibilityState !== 'visible') {
+        showOSNotification(key, title, body, () => { window.location.href = url; });
+        bumpTitleBadge();
+      }
+    };
+
+    // Live-updates a conversation's row in the list the moment a message
+    // arrives: refreshes the preview text and timestamp, bumps the unread
+    // badge, and moves the row to the top — exactly like WhatsApp/Messenger.
+    // The server-computed values take over again on the next full reload;
+    // this is purely for instant feedback while the dashboard stays open.
+    function _liveUpdateRow(data) {
+      const myPhone = localStorage.getItem('exomnia_user_phone');
+      const selector = data.type === 'group'
+        ? '[data-type="group"][data-id="' + data.group_id + '"]'
+        : '[data-type="contact"][data-phone="' + (data.sender === myPhone ? data.receiver : data.sender) + '"]';
+      const row = document.querySelector(selector);
+      if (!row) return; // brand-new contact/group not yet in the list — next reload picks it up
+
+      const preview = row.querySelector('.cx-preview');
+      if (preview) {
+        const isYou = String(data.last_sender || data.sender) === String(myPhone);
+        const youLabel = isYou ? '<span class="you-label">You: </span>' : '';
+        const raw = (data.preview || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        preview.innerHTML = youLabel + raw;
+        // store the timestamp so the ticker can refresh it
+        row.dataset.lastTime = data.timestamp || new Date().toISOString();
+      }
+
+      const meta = row.querySelector('.cx-meta');
+      if (meta) {
+        let timeEl = meta.querySelector('.cx-time');
+        if (!timeEl) {
+          timeEl = document.createElement('span');
+          timeEl.className = 'cx-time';
+          meta.insertBefore(timeEl, meta.firstChild);
+        }
+        timeEl.textContent = 'now';
+
+        // Only bump the unread badge for messages the user received (not sent)
+        const isSent = String(data.last_sender || data.sender) === String(myPhone);
+        if (!isSent) {
+          let badge = meta.querySelector('.cx-badge');
+          if (badge) {
+            const current = parseInt(badge.textContent, 10) || 0;
+            badge.textContent = (current + 1) > 99 ? '99+' : String(current + 1);
+          } else {
+            badge = document.createElement('span');
+            badge.className = 'cx-badge';
+            badge.textContent = '1';
+            meta.appendChild(badge);
+          }
+        }
+      }
+
+      // Bump this conversation to the top of its list
+      if (row.parentElement && row.parentElement.firstElementChild !== row) {
+        row.parentElement.prepend(row);
+      }
+
+      // Brief highlight so the update is noticeable
+      const card = row.querySelector('.cx-card');
+      if (card) {
+        card.style.transition = 'background-color 0.4s ease';
+        card.style.backgroundColor = '#eaf6f5';
+        setTimeout(() => { card.style.backgroundColor = ''; }, 700);
+      }
+    }
+
+    // Tick all timestamps every 60 s so "3d" doesn't stay frozen as time passes
+    setInterval(() => {
+      document.querySelectorAll('[data-last-time]').forEach(row => {
+        const timeEl = row.querySelector('.cx-time');
+        if (timeEl && row.dataset.lastTime) {
+          timeEl.textContent = _cxRelTime(row.dataset.lastTime);
+        }
+      });
+    }, 60000);
+
+    // When the user sends a message, update their own side of the row too.
+    // The notif socket doesn't hear self-messages, so we piggyback on the
+    // existing receive_message / receive_file_message events that the chat
+    // page already emits back to the sender's room.
+    const _notifPhone = localStorage.getItem('exomnia_user_phone');
+    if (_notifPhone) {
+      const notifSocket = io();
+      notifSocket.on('connect', () => {
+        notifSocket.emit('register_user', { phone: _notifPhone });
+      });
+      notifSocket.on('new_message_notification', data => window.exomniaNotify(data, false));
+
+      // Self-sent message: update sender's own contact row in real time
+      notifSocket.on('receive_message', data => {
+        if (String(data.sender) !== String(_notifPhone)) return;
+        _liveUpdateRow({
+          type: 'dm',
+          sender: data.sender,
+          receiver: data.receiver,
+          last_sender: data.sender,
+          preview: data.message || '',
+          timestamp: data.timestamp
+        });
+      });
+      notifSocket.on('receive_file_message', data => {
+        if (String(data.sender) !== String(_notifPhone)) return;
+        const icons = { image: '📷 Photo', video: '🎥 Video', audio: '🎵 Audio', voice: '🎤 Voice message' };
+        _liveUpdateRow({
+          type: 'dm',
+          sender: data.sender,
+          receiver: data.receiver,
+          last_sender: data.sender,
+          preview: icons[data.message_type] || ('📎 ' + (data.file_name || 'File')),
+          timestamp: data.timestamp || new Date().toISOString()
+        });
+      });
+      notifSocket.on('receive_group_message', data => {
+        if (String(data.sender) !== String(_notifPhone)) return;
+        _liveUpdateRow({
+          type: 'group',
+          group_id: String(data.group_id),
+          sender: data.sender,
+          last_sender: data.sender,
+          preview: data.message || '',
+          timestamp: data.timestamp
+        });
+      });
+    }
+  })();
+  </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/static/service-worker.js').catch(err => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>

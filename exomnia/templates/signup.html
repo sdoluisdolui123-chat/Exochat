@@ -312,7 +312,7 @@
 
         function showErr(msg) { errText.textContent = msg; errBox.classList.add('show'); errBox.scrollIntoView({behavior:'smooth',block:'nearest'}); }
         function hideErr()    { errBox.classList.remove('show'); }
-        function buildPhone() { hiddenEl.value = ccEl.value + phoneEl.value.replace(/\\D/g, ''); }
+        function buildPhone() { hiddenEl.value = ccEl.value + phoneEl.value.replace(/\D/g, ''); }
 
         {% if error %}showErr("{{ error }}");{% endif %}
 
@@ -389,7 +389,6 @@
             const btn = document.getElementById('submitBtn');
             btn.innerHTML = '<span class="spinner"></span> Creating…';
             btn.disabled = true;
-        });
         });
     </script>
 <script>

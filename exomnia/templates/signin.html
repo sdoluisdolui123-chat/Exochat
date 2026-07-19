@@ -478,14 +478,14 @@
             errBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
         function hideErr() { errBox.classList.remove('show'); }
-        function buildPhone() { hiddenEl.value = ccEl.value + phoneEl.value.replace(/\\D/g, ''); }
+        function buildPhone() { hiddenEl.value = ccEl.value + phoneEl.value.replace(/\D/g, ''); }
 
         {% if error %}
             showErr("{{ error }}");
         {% endif %}
 
         phoneEl.addEventListener('input', function() {
-            this.value = this.value.replace(/\\D/g, '');
+            this.value = this.value.replace(/\D/g, '');
             hideErr(); buildPhone();
         });
 

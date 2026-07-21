@@ -270,6 +270,27 @@ def init_db():
             except Exception:
                 pass
 
+        # Migration: add email column (required at signup going forward, so
+        # existing users can add a password-reset method via their profile)
+        try:
+            c.execute("ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''")
+        except Exception:
+            pass
+
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                phone TEXT NOT NULL,
+                code TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                used INTEGER DEFAULT 0,
+                FOREIGN KEY(phone) REFERENCES users(phone)
+            )
+        """)
+        c.execute("CREATE INDEX IF NOT EXISTS idx_password_resets_phone ON password_resets(phone, used, expires_at)")
+
         conn.commit()
     finally:
         return_db_connection(conn)
+

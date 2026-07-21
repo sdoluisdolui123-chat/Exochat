@@ -58,3 +58,15 @@ def get_file_type(filename):
 def validate_phone(phone):
     pattern = r'^\+\d{1,4}\d{6,14}$'
     return re.match(pattern, phone) is not None
+
+
+def validate_email(email):
+    pattern = r'^[^@\s]+@[^@\s]+\.[^@\s]+$'
+    return re.match(pattern, email) is not None
+
+
+def generate_reset_code():
+    """6-digit numeric code for password-reset emails."""
+    import secrets
+    return f"{secrets.randbelow(1000000):06d}"
+

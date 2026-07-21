@@ -129,6 +129,15 @@
         .error-banner.show { display: flex; }
         .error-banner i { margin-top: 1px; flex-shrink: 0; }
 
+        .success-banner {
+            display: none; align-items: flex-start; gap: 9px;
+            background: rgba(31,216,164,0.1); border: 1px solid rgba(31,216,164,0.35);
+            border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;
+            font-size: 13px; color: #0a7a5c; line-height: 1.45;
+        }
+        .success-banner.show { display: flex; }
+        .success-banner i { margin-top: 1px; flex-shrink: 0; }
+
         /* ── Fields ── */
         .field { margin-bottom: 18px; }
 
@@ -385,6 +394,12 @@
                 <span id="errorText"></span>
             </div>
 
+            <!-- Success (e.g. after password reset) -->
+            <div class="success-banner" id="successMsg">
+                <i class="fas fa-circle-check"></i>
+                <span>Password reset! Sign in with your new password.</span>
+            </div>
+
             <form method="POST" id="loginForm" novalidate>
 
                 <!-- Phone -->
@@ -429,7 +444,7 @@
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </button>
                     </div>
-                    <a href="#" class="forgot-link">Forgot password?</a>
+                    <a href="/forgot-password" class="forgot-link">Forgot password?</a>
                 </div>
 
                 <input type="hidden" name="phone" id="full_number">
@@ -482,6 +497,9 @@
 
         {% if error %}
             showErr("{{ error }}");
+        {% endif %}
+        {% if request.args.get('reset') == 'success' %}
+            document.getElementById('successMsg').classList.add('show');
         {% endif %}
 
         phoneEl.addEventListener('input', function() {

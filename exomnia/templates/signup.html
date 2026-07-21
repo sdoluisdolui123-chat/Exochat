@@ -257,6 +257,16 @@
                 </div>
 
                 <div class="field">
+                    <label class="field-label"><i class="fas fa-envelope"></i> Email</label>
+                    <div class="input-wrap">
+                        <i class="pfx fas fa-envelope"></i>
+                        <input type="email" id="email" name="email"
+                               placeholder="you@example.com"
+                               autocomplete="email" autocorrect="off" spellcheck="false" required>
+                    </div>
+                </div>
+
+                <div class="field">
                     <label class="field-label"><i class="fas fa-lock"></i> Password</label>
                     <div class="input-wrap">
                         <i class="pfx fas fa-lock"></i>
@@ -328,6 +338,7 @@
 
         const pwdEl  = document.getElementById('password');
         const confEl = document.getElementById('password_confirm');
+        const emailEl = document.getElementById('email');
 
         // Strength meter
         pwdEl.closest('.input-wrap').insertAdjacentHTML('afterend',
@@ -382,6 +393,7 @@
             const conf = confEl.value;
             if (!name)          { e.preventDefault(); showErr('Please enter your name.');                  document.getElementById('display_name').focus(); return; }
             if (!num)           { e.preventDefault(); showErr('Please enter your phone number.');          phoneEl.focus(); return; }
+            if (!emailEl.value.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailEl.value.trim())) { e.preventDefault(); showErr('Please enter a valid email address.'); emailEl.focus(); return; }
             if (pwd.length < 6) { e.preventDefault(); showErr('Password must be at least 6 characters.'); pwdEl.focus();   return; }
             if (pwd !== conf)   { e.preventDefault(); showErr('Passwords do not match.');                  confEl.focus();  return; }
             buildPhone();

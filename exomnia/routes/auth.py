@@ -112,29 +112,23 @@ def signin():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        country_code = request.form.get("country_code", "").strip()
-        phone_number = request.form.get("phone_number", "").strip()
-        phone        = request.form.get("phone", "").strip()
+        email = request.form.get("email", "").strip().lower()
 
-        if not phone and country_code and phone_number:
-            phone = country_code + phone_number
+        if not email or not validate_email(email):
+            return render_template('forgot_password.html', error="Please enter a valid email address")
 
-        if not phone or not validate_phone(phone):
-            return render_template('forgot_password.html', error="Please enter a valid phone number with country code")
-
-        # Always show the same generic message regardless of whether the
-        # phone number exists or has an email on file — this avoids leaking
-        # which phone numbers are registered.
-        generic_msg = ("If this phone number has an email on file, we've sent "
-                        "a 6-digit reset code to it. Enter it on the next screen.")
+        # Always show the same generic message regardless of whether this
+        # email is on file — this avoids leaking which emails are registered.
+        generic_msg = ("If this email is on an account, we've sent a "
+                        "6-digit reset code to it. Enter it on the next screen.")
         try:
             conn = get_db_connection()
             try:
                 c = conn.cursor()
-                c.execute("SELECT email, display_name, username FROM users WHERE phone=?", (phone,))
+                c.execute("SELECT phone, display_name, username FROM users WHERE email=?", (email,))
                 row = c.fetchone()
                 if row and row[0]:
-                    email, display_name, username = row
+                    phone, display_name, username = row
                     code = generate_reset_code()
                     expires_at = (datetime.now() + timedelta(minutes=15)).isoformat()
                     c.execute(
@@ -149,7 +143,7 @@ def forgot_password():
             print(f"Error in forgot_password: {e}")
             # Still show the generic message — don't reveal internal errors either
 
-        return render_template('reset_password.html', phone=phone, info=generic_msg)
+        return render_template('reset_password.html', email=email, info=generic_msg)
 
     return render_template('forgot_password.html')
 
@@ -157,24 +151,30 @@ def forgot_password():
 @app.route("/reset-password", methods=["GET", "POST"])
 def reset_password():
     if request.method == "POST":
-        phone         = request.form.get("phone", "").strip()
+        email         = request.form.get("email", "").strip().lower()
         code          = request.form.get("code", "").strip()
         password      = request.form.get("password", "").strip()
         password_conf = request.form.get("password_confirm", "").strip()
 
-        if not phone or not validate_phone(phone):
+        if not email or not validate_email(email):
             return render_template('forgot_password.html', error="Something went wrong — please start over")
         if not code:
-            return render_template('reset_password.html', phone=phone, error="Please enter the code from your email")
+            return render_template('reset_password.html', email=email, error="Please enter the code from your email")
         if not password or len(password) < 6:
-            return render_template('reset_password.html', phone=phone, error="Password must be at least 6 characters")
+            return render_template('reset_password.html', email=email, error="Password must be at least 6 characters")
         if password != password_conf:
-            return render_template('reset_password.html', phone=phone, error="Passwords do not match")
+            return render_template('reset_password.html', email=email, error="Passwords do not match")
 
         try:
             conn = get_db_connection()
             try:
                 c = conn.cursor()
+                c.execute("SELECT phone FROM users WHERE email=?", (email,))
+                user_row = c.fetchone()
+                if not user_row:
+                    return render_template('reset_password.html', email=email, error="Invalid or already-used code")
+                phone = user_row[0]
+
                 c.execute(
                     "SELECT id, expires_at FROM password_resets "
                     "WHERE phone=? AND code=? AND used=0 ORDER BY id DESC LIMIT 1",
@@ -182,10 +182,10 @@ def reset_password():
                 )
                 row = c.fetchone()
                 if not row:
-                    return render_template('reset_password.html', phone=phone, error="Invalid or already-used code")
+                    return render_template('reset_password.html', email=email, error="Invalid or already-used code")
                 reset_id, expires_at = row
                 if datetime.now() > datetime.fromisoformat(expires_at):
-                    return render_template('reset_password.html', phone=phone, error="This code has expired — please request a new one")
+                    return render_template('reset_password.html', email=email, error="This code has expired — please request a new one")
 
                 pwd_hash = generate_password_hash(password)
                 c.execute("UPDATE users SET password_hash=? WHERE phone=?", (pwd_hash, phone))
@@ -196,8 +196,8 @@ def reset_password():
             return redirect(url_for('signin', reset='success'))
         except Exception as e:
             print(f"Error in reset_password: {e}")
-            return render_template('reset_password.html', phone=phone, error="An error occurred. Please try again.")
+            return render_template('reset_password.html', email=email, error="An error occurred. Please try again.")
 
-    phone = request.args.get('phone', '')
-    return render_template('reset_password.html', phone=phone)
+    email = request.args.get('email', '')
+    return render_template('reset_password.html', email=email)
 

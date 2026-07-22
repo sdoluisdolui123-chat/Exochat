@@ -136,11 +136,22 @@ def forgot_password():
                         (phone, code, expires_at)
                     )
                     conn.commit()
-                    send_reset_code_email(email, display_name or username, code)
+                    print(f"[FORGOT_PASSWORD] About to send reset email to {email}")
+                    try:
+                        result = send_reset_code_email(email, display_name or username, code)
+                        print(f"[FORGOT_PASSWORD] send_reset_code_email returned: {result}")
+                    except Exception as email_error:
+                        print(f"[FORGOT_PASSWORD] ❌ Email send exception: {email_error}")
+                        import traceback
+                        traceback.print_exc()
+                else:
+                    print(f"[FORGOT_PASSWORD] No user found with email: {email}")
             finally:
                 return_db_connection(conn)
         except Exception as e:
             print(f"Error in forgot_password: {e}")
+            import traceback
+            traceback.print_exc()
             # Still show the generic message — don't reveal internal errors either
 
         return render_template('reset_password.html', email=email, info=generic_msg)
@@ -200,4 +211,3 @@ def reset_password():
 
     email = request.args.get('email', '')
     return render_template('reset_password.html', email=email)
-

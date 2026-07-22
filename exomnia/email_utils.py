@@ -43,23 +43,14 @@ def send_reset_code_email(to_email, display_name, code):
               f"{to_email}: {code}")
         return True
 
+    # Clean HTML without extra whitespace
+    html_content = f"""<html><body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;"><div style="max-width: 480px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"><h2 style="color: #0E4950; margin-bottom: 10px;">Reset your password</h2><p style="color: #333; font-size: 14px; line-height: 1.6;">Hi {display_name or 'there'},</p><p style="color: #333; font-size: 14px; line-height: 1.6;">Use this code to reset your Exomnia password. It expires in 15 minutes.</p><div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; background: #f0f4f4; padding: 16px 24px; border-radius: 8px; text-align: center; color: #0E4950; margin: 25px 0; border: 2px solid #0E4950;">{code}</div><p style="color: #666; font-size: 13px;">If you didn't request this, you can safely ignore this email.</p><hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;"><p style="color: #999; font-size: 12px; text-align: center;">© 2026 Exomnia. All rights reserved.</p></div></body></html>"""
+
     payload = {
         "sender": {"name": BREVO_SENDER_NAME, "email": BREVO_SENDER_EMAIL},
         "to": [{"email": to_email, "name": display_name or to_email}],
         "subject": "Your Exomnia password reset code",
-        "htmlContent": f"""
-            <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
-                <h2 style="color:#0E4950;">Reset your password</h2>
-                <p>Hi {display_name or ''},</p>
-                <p>Use this code to reset your Exomnia password. It expires in 15 minutes.</p>
-                <div style="font-size: 32px; font-weight: bold; letter-spacing: 6px;
-                            background:#f0f4f4; padding: 16px 24px; border-radius: 8px;
-                            text-align: center; color:#0E4950; margin: 20px 0;">
-                    {code}
-                </div>
-                <p>If you didn't request this, you can safely ignore this email.</p>
-            </div>
-        """,
+        "htmlContent": html_content,
     }
 
     req = urllib.request.Request(
@@ -74,10 +65,13 @@ def send_reset_code_email(to_email, display_name, code):
     )
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
+            print(f"✅ Brevo API response: {resp.status}")
+            print(f"📧 Email sent to: {to_email} | Reset code: {code}")
             return 200 <= resp.status < 300
     except urllib.error.HTTPError as e:
-        print(f"Brevo API error {e.code}: {e.read().decode(errors='ignore')}")
+        error_msg = e.read().decode(errors='ignore')
+        print(f"❌ Brevo API error {e.code}: {error_msg}")
         return False
     except Exception as e:
-        print(f"Error sending reset email: {e}")
+        print(f"❌ Error sending reset email: {e}")
         return False

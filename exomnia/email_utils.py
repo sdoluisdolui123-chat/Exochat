@@ -6,11 +6,17 @@ for transactional emails, especially from free email domains.
 
 Setup (do this once):
   1. Go to https://myaccount.google.com/apppasswords
-  2. Select "Mail" and "Windows Computer"
-  3. Get a 16-character app password
-  4. Set these environment variables (locally and on Render):
+  2. You will see a dropdown for "Select the app and device you're using"
+  3. Select "Mail" in the app dropdown
+  4. For Device, select "Windows Computer" (or any device - it will work for all)
+  5. Click Generate
+  6. Copy the 16-character app password that appears
+  7. Set these environment variables (locally and on Render):
        GMAIL_EMAIL=your-email@gmail.com
-       GMAIL_PASSWORD=xxxx-xxxx-xxxx-xxxx  (the app password, not your account password)
+       GMAIL_PASSWORD=xxxx-xxxx-xxxx-xxxx  (the app password, NOT your account password)
+
+Note: The app password works for ALL devices (mobile, computer, etc.) once generated.
+You only need to generate it once, not for each device.
 
 Without GMAIL_EMAIL and GMAIL_PASSWORD set, send_reset_code_email() logs the code to the
 console instead of emailing it — handy for local development so you're

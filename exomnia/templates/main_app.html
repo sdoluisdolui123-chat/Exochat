@@ -2149,6 +2149,12 @@
         <input id="editDisplayName" class="profile-input" type="text" placeholder="Your name" maxlength="40">
       </div>
 
+      <!-- Email -->
+      <div style="margin-bottom:16px;">
+        <label style="font-size:13px;font-weight:600;color:#4a6567;">Email <span style="font-weight:400;color:#9bb5b7;">used for password reset</span></label>
+        <input id="editEmail" class="profile-input" type="email" placeholder="you@example.com" autocomplete="email">
+      </div>
+
       <!-- Bio -->
       <div style="margin-bottom:24px;">
         <label style="font-size:13px;font-weight:600;color:#4a6567;">Bio <span style="font-weight:400;color:#9bb5b7;">max 120 chars</span></label>
@@ -2343,7 +2349,7 @@
     // ── Profile state ──────────────────────────────────────────────
     const AVATAR_COLORS = ['#0E4950','#2ec4b6','#1a6b75','#e76f51','#f4a261','#9b5de5','#f15bb5','#00bbf9','#00f5d4','#3d405b'];
     const AVATAR_EMOJIS = ['','😊','😎','🎯','🔥','💫','🌿','🎵','⚡','🦋','🏆','💡','🌙','🎨','🚀'];
-    let _profileData = { phone:'', display_name:'', bio:'', avatar_color:'#0E4950', avatar_emoji:'', avatar_photo:'', banner_photo:'' };
+    let _profileData = { phone:'', display_name:'', bio:'', avatar_color:'#0E4950', avatar_emoji:'', avatar_photo:'', banner_photo:'', email:'' };
     let _editColor = '#0E4950';
     let _editEmoji = '';
 
@@ -2510,6 +2516,7 @@
       _editEmoji = p.avatar_emoji || '';
 
       document.getElementById('editDisplayName').value = p.display_name || '';
+      document.getElementById('editEmail').value = p.email || '';
       document.getElementById('editBio').value = p.bio || '';
 
       // Build colour swatches
@@ -2615,14 +2622,20 @@
       const phone = localStorage.getItem('exomnia_user_phone');
       const btn = document.getElementById('saveProfileBtn');
       const display_name = document.getElementById('editDisplayName').value.trim();
+      const email = document.getElementById('editEmail').value.trim();
       const bio = document.getElementById('editBio').value.trim();
+
+      if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        showToast('Please enter a valid email address');
+        return;
+      }
 
       btn.disabled = true; btn.textContent = 'Saving…';
 
       fetch('/api/profile/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, display_name, bio, avatar_color: _editColor, avatar_emoji: _editEmoji })
+        body: JSON.stringify({ phone, display_name, email, bio, avatar_color: _editColor, avatar_emoji: _editEmoji })
       })
       .then(r => r.json())
       .then(data => {
@@ -2630,7 +2643,7 @@
         if (data.success) {
           closeProfileEdit();
           showToast('Profile updated ✓');
-          _profileData = { ..._profileData, display_name, bio, avatar_color: _editColor, avatar_emoji: _editEmoji };
+          _profileData = { ..._profileData, display_name, email: email || _profileData.email, bio, avatar_color: _editColor, avatar_emoji: _editEmoji };
           renderProfileOverlay(_profileData);
           updateHeaderProfileAvatar();
         } else {

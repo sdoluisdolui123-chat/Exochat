@@ -8,6 +8,7 @@ from flask import request, jsonify, send_from_directory
 from ..extensions import app
 from ..db import get_db_connection, return_db_connection
 from ..cache import cache
+from ..utils import validate_email
 
 
 # ----------------- Profile API -----------------
@@ -19,7 +20,7 @@ def api_get_profile():
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute("SELECT phone, display_name, bio, avatar_color, avatar_emoji, last_online, avatar_photo, banner_photo FROM users WHERE phone=?", (phone,))
+        c.execute("SELECT phone, display_name, bio, avatar_color, avatar_emoji, last_online, avatar_photo, banner_photo, email FROM users WHERE phone=?", (phone,))
         row = c.fetchone()
     finally:
         return_db_connection(conn)
@@ -34,6 +35,7 @@ def api_get_profile():
         "last_online": row[5] or "",
         "avatar_photo": row[6] or "",
         "banner_photo": row[7] or "",
+        "email": row[8] or "",
     })
 
 @app.route("/api/profile/update", methods=["POST"])
@@ -44,15 +46,26 @@ def api_update_profile():
     bio = data.get("bio", "").strip()[:120]
     avatar_color = data.get("avatar_color", "#0E4950").strip()
     avatar_emoji = data.get("avatar_emoji", "").strip()
+    email = data.get("email", "").strip().lower()
     if not phone:
         return jsonify({"success": False, "error": "Phone required"}), 400
+    if email and not validate_email(email):
+        return jsonify({"success": False, "error": "Please enter a valid email address"}), 400
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute("""
-            UPDATE users SET display_name=?, bio=?, avatar_color=?, avatar_emoji=?
-            WHERE phone=?
-        """, (display_name, bio, avatar_color, avatar_emoji, phone))
+        if email:
+            c.execute("""
+                UPDATE users SET display_name=?, bio=?, avatar_color=?, avatar_emoji=?, email=?
+                WHERE phone=?
+            """, (display_name, bio, avatar_color, avatar_emoji, email, phone))
+        else:
+            # Don't overwrite an existing email with a blank one — only
+            # update it when the person actually provided a new value.
+            c.execute("""
+                UPDATE users SET display_name=?, bio=?, avatar_color=?, avatar_emoji=?
+                WHERE phone=?
+            """, (display_name, bio, avatar_color, avatar_emoji, phone))
         conn.commit()
     finally:
         return_db_connection(conn)

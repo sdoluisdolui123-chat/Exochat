@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1831,6 +1832,76 @@
         }, true);
       }).observe(_mainContent, { childList: true, subtree: true });
     }
+
+    // ── Swipe left / right to switch between bottom tabs ──────────
+    // Tab order matches the bottom-nav / desktop rail left-to-right.
+    const _tabOrder = ['chat', 'social', 'video', 'market'];
+    let _currentTabName = 'chat';
+
+    // Wrap openTab so every tab switch (tap OR swipe) goes through one place:
+    // we track which tab is active, and add a quick fade so the switch feels
+    // intentional instead of an abrupt content swap.
+    const _origOpenTab = openTab;
+    openTab = function(tabName, element) {
+      _currentTabName = tabName;
+      const content = document.getElementById('main-content');
+      if (content) {
+        content.style.transition = 'opacity 0.15s ease';
+        content.style.opacity = '0';
+        setTimeout(() => {
+          _origOpenTab(tabName, element);
+          requestAnimationFrame(() => { content.style.opacity = '1'; });
+        }, 90);
+      } else {
+        _origOpenTab(tabName, element);
+      }
+    };
+
+    (function setupTabSwipe() {
+      const container = document.getElementById('main-content');
+      if (!container) return;
+
+      let startX = 0, startY = 0, tracking = false;
+
+      container.addEventListener('touchstart', function(e) {
+        // Let the contacts/groups swipe-to-delete gesture keep full control
+        // of its own rows — don't compete with it for the same touch.
+        if (e.target.closest('.deletable-row') || e.touches.length !== 1) {
+          tracking = false;
+          return;
+        }
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        tracking = true;
+      }, { passive: true });
+
+      container.addEventListener('touchend', function(e) {
+        if (!tracking) return;
+        tracking = false;
+        if (e.target.closest('.deletable-row')) return;
+
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const dx = endX - startX;
+        const dy = endY - startY;
+
+        // Require a clear, mostly-horizontal swipe so normal vertical
+        // scrolling of the contact list / social feed never triggers it.
+        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+
+        const idx = _tabOrder.indexOf(_currentTabName);
+        if (idx === -1) return;
+        // Swiped finger right→left (dx negative) -> move to next tab.
+        // Swiped finger left→right (dx positive) -> move to previous tab.
+        const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+        if (nextIdx < 0 || nextIdx >= _tabOrder.length) return;
+
+        const nextTab = _tabOrder[nextIdx];
+        const tabEl = document.querySelector(`.bottom-nav .tab[onclick*="'${nextTab}'"]`)
+                   || document.querySelector(`.desktop-rail .tab[onclick*="'${nextTab}'"]`);
+        openTab(nextTab, tabEl);
+      }, { passive: true });
+    })();
   </script>
 
   <script>

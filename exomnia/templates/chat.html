@@ -2338,15 +2338,32 @@
             return `Last seen ${d} day${d>1?'s':''} ago`;
         }
 
+        // Remember the contact's last known status so the "Last seen X ago"
+        // text can be refreshed on a timer (see setInterval below) instead of
+        // freezing at whatever it said the moment the event arrived.
+        let contactStatus = null;        // 'online' | 'offline'
+        let contactLastOnline = null;    // ISO timestamp, only meaningful when offline
+
         function setPresence(status, lastOnline) {
+            contactStatus = status;
             if (status === 'online') {
+                contactLastOnline = null;
                 statusDot.className = 'status-dot status-online';
                 statusText.textContent = 'Online';
             } else {
+                contactLastOnline = lastOnline;
                 statusDot.className = 'status-dot status-offline';
                 statusText.textContent = formatLastSeen(lastOnline);
             }
         }
+
+        // Keep the "Last seen X ago" text fresh (just now -> 1 min ago ->
+        // 2 mins ago -> ... ) without waiting for another server event.
+        setInterval(() => {
+            if (contactStatus === 'offline' && contactLastOnline) {
+                statusText.textContent = formatLastSeen(contactLastOnline);
+            }
+        }, 15000);
 
         function updateConnectionStatus(connected) {
             isConnected = connected;
@@ -2385,6 +2402,8 @@
                     .then(data => {
                         clearTimeout(timeoutId);
                         if (statusText.textContent === 'Loading…') {
+                            contactStatus = 'offline';
+                            contactLastOnline = data.last_online || null;
                             statusText.textContent = data.last_online
                                 ? formatLastSeen(data.last_online)
                                 : 'Offline';
@@ -2393,6 +2412,8 @@
                     }).catch(() => {
                         clearTimeout(timeoutId);
                         if (statusText.textContent === 'Loading…') {
+                            contactStatus = 'offline';
+                            contactLastOnline = null;
                             statusText.textContent = 'Offline';
                             statusDot.className = 'status-dot status-offline';
                         }

@@ -13,6 +13,7 @@ from .crypto import encryptor
 from .chat_utils import (
     get_room, _file_preview_text, _resolve_display_name,
     _user_online, _broadcast_presence, connected_users, online_users,
+    _add_watcher, _notify_watchers,
 )
 
 typing_status = {}
@@ -36,9 +37,16 @@ def on_register_user(data):
             existing = connected_users.get(sid, {})
             connected_users[sid] = {'phone': phone, 'room': existing.get('room'), 'contact': existing.get('contact')}
 
+            was_offline = phone not in online_users or not online_users[phone]
             if phone not in online_users:
                 online_users[phone] = set()
             online_users[phone].add(sid)
+
+            # Let anyone already watching this user (e.g. they have this
+            # user's chat open) know right away that they're online, even
+            # though this user hasn't opened a specific chat themselves yet.
+            if was_offline:
+                _notify_watchers(phone, 'online')
     except Exception as e:
         print(f"Error in register_user: {e}")
 
@@ -68,8 +76,13 @@ def on_join(data):
         finally:
             return_db_connection(conn)
 
-        # Tell the contact this user is online
-        _broadcast_presence(user, contact, 'online')
+        # Remember that `user` wants to know about `contact`'s presence from
+        # now on, no matter what page `contact` is on when it changes.
+        _add_watcher(contact, user)
+
+        # Tell everyone watching this user (not just `contact`, in case this
+        # user has other open chats too) that they're online
+        _notify_watchers(user, 'online')
 
         # Tell this user whether their contact is currently online
         contact_online = _user_online(contact)
@@ -118,9 +131,10 @@ def on_disconnect(reason=None):
                         conn.commit()
                     finally:
                         return_db_connection(conn)
-                    # Notify contact they went offline
-                    if contact:
-                        _broadcast_presence(phone, contact, 'offline', now_iso)
+                    # Notify everyone watching this user (every open chat
+                    # that has this user as the contact), not just the one
+                    # chat window this particular socket happened to be in.
+                    _notify_watchers(phone, 'offline', now_iso)
 
         # Clean up stale typing statuses
         for key in list(typing_status.keys()):

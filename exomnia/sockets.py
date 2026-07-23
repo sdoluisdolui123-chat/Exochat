@@ -625,10 +625,24 @@ def handle_set_presence(data):
             return
         now_iso = datetime.now().isoformat()
         if status == 'away':
-            # Treat away as offline for the contact's view
-            _broadcast_presence(phone, contact, 'offline', now_iso)
+            # User backed out / minimized the app for this chat. Persist the
+            # last_online stamp so a fresh page load / API fetch also sees it,
+            # and tell EVERY watcher of this user (every open chat that has
+            # this phone as its contact) right away — not just the one chat
+            # window that happened to trigger this event.
+            try:
+                conn = get_db_connection()
+                cur = conn.cursor()
+                cur.execute("UPDATE users SET last_online = %s WHERE phone = %s", (now_iso, phone))
+                conn.commit()
+                cur.close()
+            except Exception as e:
+                print(f"Error stamping last_online in set_presence: {e}")
+            finally:
+                return_db_connection(conn)
+            _notify_watchers(phone, 'offline', now_iso)
         else:
-            _broadcast_presence(phone, contact, 'online')
+            _notify_watchers(phone, 'online')
     except Exception as e:
         print(f"Error in set_presence: {e}")
 

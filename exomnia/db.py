@@ -58,6 +58,17 @@ def return_db_connection(conn):
 
 # ----------------- Database Setup -----------------
 def init_db():
+    if not DATA_DIR:
+        print("=" * 70)
+        print("⚠️  WARNING: DATA_DIR is not set — chat.db is being stored on the")
+        print("   app's local/ephemeral disk. On most hosts (Render, Railway,")
+        print("   Heroku, etc.) that storage is WIPED on every restart, deploy,")
+        print("   or free-tier idle spin-down — which deletes ALL accounts and")
+        print("   messages without warning.")
+        print("   Fix: attach a persistent disk/volume in your hosting dashboard")
+        print("   and set the DATA_DIR environment variable to its mount path")
+        print("   (e.g. DATA_DIR=/var/data on Render).")
+        print("=" * 70)
     conn = get_db_connection()
     try:
         c = conn.cursor()

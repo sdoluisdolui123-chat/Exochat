@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -40,6 +39,14 @@
       overflow-y: auto;
       transition: 0.3s ease;
       padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
+    }
+
+    @keyframes tabFadeIn {
+      from { opacity: 0.35; }
+      to   { opacity: 1; }
+    }
+    #main-content.tab-fade-in {
+      animation: tabFadeIn 0.14s ease-out;
     }
 
     .bottom-nav {
@@ -1838,22 +1845,20 @@
     const _tabOrder = ['chat', 'social', 'video', 'market'];
     let _currentTabName = 'chat';
 
-    // Wrap openTab so every tab switch (tap OR swipe) goes through one place:
-    // we track which tab is active, and add a quick fade so the switch feels
-    // intentional instead of an abrupt content swap.
+    // Wrap openTab so every tab switch (tap OR swipe) goes through one place.
+    // Content swaps INSTANTLY (no artificial delay) and just gets a quick
+    // fade-in via a CSS animation class, so taps feel immediate.
     const _origOpenTab = openTab;
     openTab = function(tabName, element) {
       _currentTabName = tabName;
       const content = document.getElementById('main-content');
+      _origOpenTab(tabName, element);
       if (content) {
-        content.style.transition = 'opacity 0.15s ease';
-        content.style.opacity = '0';
-        setTimeout(() => {
-          _origOpenTab(tabName, element);
-          requestAnimationFrame(() => { content.style.opacity = '1'; });
-        }, 90);
-      } else {
-        _origOpenTab(tabName, element);
+        content.style.transition = 'none';
+        content.style.transform = 'translateX(0)';
+        content.classList.remove('tab-fade-in');
+        void content.offsetWidth; // restart the animation every time
+        content.classList.add('tab-fade-in');
       }
     };
 
@@ -1861,7 +1866,7 @@
       const container = document.getElementById('main-content');
       if (!container) return;
 
-      let startX = 0, startY = 0, tracking = false;
+      let startX = 0, startY = 0, currentX = 0, tracking = false, dragging = false;
 
       container.addEventListener('touchstart', function(e) {
         // Let the contacts/groups swipe-to-delete gesture keep full control
@@ -1870,36 +1875,60 @@
           tracking = false;
           return;
         }
-        startX = e.touches[0].clientX;
+        startX = currentX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         tracking = true;
+        dragging = false;
       }, { passive: true });
 
-      container.addEventListener('touchend', function(e) {
+      container.addEventListener('touchmove', function(e) {
         if (!tracking) return;
-        tracking = false;
-        if (e.target.closest('.deletable-row')) return;
+        currentX = e.touches[0].clientX;
+        const dx = currentX - startX;
+        const dy = e.touches[0].clientY - startY;
 
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        const dx = endX - startX;
-        const dy = endY - startY;
-
-        // Require a clear, mostly-horizontal swipe so normal vertical
-        // scrolling of the contact list / social feed never triggers it.
-        if (Math.abs(dx) < 70 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+        if (!dragging) {
+          if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) {
+            dragging = true; // clearly horizontal — take over as a tab swipe
+          } else if (Math.abs(dy) > 12) {
+            tracking = false; // clearly vertical — leave it as a normal scroll
+            return;
+          } else {
+            return; // not enough movement yet to tell
+          }
+        }
 
         const idx = _tabOrder.indexOf(_currentTabName);
-        if (idx === -1) return;
-        // Swiped finger right→left (dx negative) -> move to next tab.
-        // Swiped finger left→right (dx positive) -> move to previous tab.
-        const nextIdx = dx < 0 ? idx + 1 : idx - 1;
-        if (nextIdx < 0 || nextIdx >= _tabOrder.length) return;
+        // Resistance at the first/last tab so it doesn't drag past the ends
+        const atStart = idx === 0 && dx > 0;
+        const atEnd = idx === _tabOrder.length - 1 && dx < 0;
+        const drag = (atStart || atEnd) ? dx * 0.3 : dx;
 
-        const nextTab = _tabOrder[nextIdx];
-        const tabEl = document.querySelector(`.bottom-nav .tab[onclick*="'${nextTab}'"]`)
-                   || document.querySelector(`.desktop-rail .tab[onclick*="'${nextTab}'"]`);
-        openTab(nextTab, tabEl);
+        container.style.transition = 'none';
+        container.style.transform = `translateX(${drag}px)`;
+      }, { passive: true });
+
+      container.addEventListener('touchend', function() {
+        if (!tracking) return;
+        tracking = false;
+        if (!dragging) return;
+        dragging = false;
+
+        const dx = currentX - startX;
+        const idx = _tabOrder.indexOf(_currentTabName);
+        const threshold = 55;
+        const nextIdx = dx < 0 ? idx + 1 : idx - 1;
+
+        if (Math.abs(dx) > threshold && nextIdx >= 0 && nextIdx < _tabOrder.length) {
+          const nextTab = _tabOrder[nextIdx];
+          const tabEl = document.querySelector(`.bottom-nav .tab[onclick*="'${nextTab}'"]`)
+                     || document.querySelector(`.desktop-rail .tab[onclick*="'${nextTab}'"]`);
+          openTab(nextTab, tabEl); // resets transform instantly + fades new content in
+        } else {
+          // Not enough movement (or already at the first/last tab) — snap back
+          container.style.transition = 'transform 0.18s ease';
+          container.style.transform = 'translateX(0)';
+        }
       }, { passive: true });
     })();
   </script>

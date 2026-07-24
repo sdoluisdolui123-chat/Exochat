@@ -1,3 +1,4 @@
+
 """
 SQLite connection pooling and schema initialization.
 """

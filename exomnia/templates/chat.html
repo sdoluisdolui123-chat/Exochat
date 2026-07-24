@@ -277,6 +277,12 @@
             box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
         }
 
+        @media (hover: hover) {
+            .bubble:hover {
+                box-shadow: 0 3px 10px rgba(14, 73, 80, 0.12);
+            }
+        }
+
         .status {
             display: flex;
             justify-content: flex-end;
@@ -314,27 +320,77 @@
             background: #fff;
             border-top: 1px solid var(--border-color);
             gap: 8px;
-            align-items: center;
+            align-items: flex-end;
             min-height: 66px;
             box-shadow: 0 -4px 20px rgba(14, 73, 80, 0.06);
             flex-shrink: 0;
         }
 
-        #message {
+        /* Groups the attach + emoji + textarea into one soft pill, so the
+           whole compose row reads as a single control instead of loose
+           buttons floating next to a text box. */
+        .input-pill {
             flex: 1;
-            padding: 11px 16px;
-            font-size: 15px;
+            display: flex;
+            align-items: flex-end;
+            gap: 2px;
+            background: #f8fafa;
             border: 1.5px solid var(--border-color);
             border-radius: 24px;
+            padding: 4px 4px 4px 6px;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+        }
+
+        .input-pill:focus-within {
+            border-color: var(--accent-color);
+            background: #fff;
+            box-shadow: 0 0 0 3px rgba(46, 196, 182, 0.12);
+        }
+
+        .pill-icon-btn {
+            width: 36px;
+            height: 36px;
+            min-width: 36px;
+            border: none;
+            border-radius: 50%;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, color 0.15s, transform 0.12s;
+            flex-shrink: 0;
+            margin-bottom: 3px;
+        }
+
+        .pill-icon-btn:hover {
+            background: rgba(46, 196, 182, 0.12);
+            color: var(--accent-color);
+        }
+
+        .pill-icon-btn:active {
+            transform: scale(0.9);
+        }
+
+        .pill-icon-btn.active {
+            background: var(--accent-color);
+            color: #fff;
+        }
+
+        #message {
+            flex: 1;
+            padding: 9px 6px;
+            font-size: 15px;
+            border: none;
             outline: none;
             resize: none;
             max-height: 120px;
             font-family: 'DM Sans', inherit;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            background: #f8fafa;
+            background: transparent;
             line-height: 1.45;
             overflow-y: auto;
-            min-height: 44px;
+            min-height: 36px;
             height: auto;
             white-space: pre-wrap;
             word-wrap: break-word;
@@ -346,10 +402,59 @@
             color: var(--light-text);
         }
 
-        #message:focus {
-            border-color: var(--accent-color);
+        /* Emoji picker for composing (separate from the message-reaction
+           emoji menu) — a small slide-up sheet above the input bar. */
+        .emoji-picker-panel {
+            display: none;
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+            max-height: 260px;
             background: #fff;
-            box-shadow: 0 0 0 3px rgba(46, 196, 182, 0.12);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: var(--shadow-strong);
+            padding: 10px;
+            z-index: 30;
+            animation: emojiPanelIn 0.16s ease;
+        }
+
+        .emoji-picker-panel.open {
+            display: block;
+        }
+
+        @keyframes emojiPanelIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .emoji-picker-grid {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 2px;
+            max-height: 238px;
+            overflow-y: auto;
+        }
+
+        .emoji-picker-grid .emoji-cell {
+            font-size: 21px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            aspect-ratio: 1;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.12s, transform 0.1s;
+            user-select: none;
+        }
+
+        .emoji-picker-grid .emoji-cell:hover {
+            background: #eef6f6;
+        }
+
+        .emoji-picker-grid .emoji-cell:active {
+            transform: scale(0.85);
         }
 
         #send-btn {
@@ -378,31 +483,8 @@
             transform: scale(0.93);
         }
 
-        /* File Upload Button */
-        #file-upload-btn {
-            width: 40px;
-            height: 40px;
-            border: none;
-            border-radius: 50%;
-            background: #e8f6f5;
-            color: var(--accent-color);
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.18s, transform 0.15s;
-            flex-shrink: 0;
-        }
-
-        #file-upload-btn:hover {
-            background: #d0efed;
-            transform: scale(1.07);
-        }
-
-        #file-upload-btn:active {
-            transform: scale(0.93);
-        }
+        /* File-upload and emoji buttons now use the shared .pill-icon-btn
+           class (see above) so they sit flush inside the input pill. */
 
         /* Mic button — same weight as send */
         #vm-mic-btn {
@@ -1135,7 +1217,7 @@
                 max-height: 90px;
             }
 
-            #send-btn, #file-upload-btn {
+            #send-btn, #vm-mic-btn {
                 width: 44px;
                 height: 44px;
             }
@@ -1379,15 +1461,25 @@
     </div>
 
     <div id="message-box">
-        <button id="file-upload-btn" onclick="openFileUploadModal()" title="Send file">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
-                <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
-                <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
-                <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
-            </svg>
-        </button>
-        <textarea id="message" placeholder="Type a message..." rows="1"></textarea>
+        <div class="input-pill">
+            <button class="pill-icon-btn" id="file-upload-btn" onclick="openFileUploadModal()" title="Send file">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2"/>
+                    <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="13" x2="8" y2="13" stroke="currentColor" stroke-width="2"/>
+                    <line x1="16" y1="17" x2="8" y2="17" stroke="currentColor" stroke-width="2"/>
+                </svg>
+            </button>
+            <button class="pill-icon-btn" id="emoji-picker-btn" onclick="toggleEmojiPicker()" title="Emoji">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                    <line x1="9" y1="9" x2="9.01" y2="9"/>
+                    <line x1="15" y1="9" x2="15.01" y2="9"/>
+                </svg>
+            </button>
+            <textarea id="message" placeholder="Type a message..." rows="1"></textarea>
+        </div>
         <button id="vm-mic-btn" onclick="VM.toggle()" title="Voice message">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -1402,6 +1494,12 @@
             </svg>
         </button>
     </div>
+
+    <!-- Emoji picker for composing messages -->
+    <div id="emojiPickerPanel" class="emoji-picker-panel">
+        <div class="emoji-picker-grid" id="emojiPickerGrid"></div>
+    </div>
+
 
     <!-- Modern Bottom Sheet File Upload Modal -->
     <div id="fileUploadModal" class="file-upload-modal">
@@ -1543,6 +1641,72 @@
         const viewerImage = document.getElementById('viewerImage');
         const viewerVideo = document.getElementById('viewerVideo');
         const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // ── Emoji picker for composing messages ─────────────────────
+        const emojiPickerPanel = document.getElementById('emojiPickerPanel');
+        const emojiPickerGrid  = document.getElementById('emojiPickerGrid');
+        const emojiPickerBtn   = document.getElementById('emoji-picker-btn');
+        const COMPOSE_EMOJIS = [
+            '😀','😁','😂','🤣','😊','😍','😘','😉','😎','🤩',
+            '🥳','😇','🙂','🙃','😅','😜','🤪','🤔','🤨','😐',
+            '😴','😪','🥱','😢','😭','😡','😱','🤯','🥺','😳',
+            '🙄','😬','🤗','🤭','🤫','😷','🤒','🥵','🥶','😈',
+            '👍','👎','👏','🙌','🙏','💪','🤝','✌️','🤞','👌',
+            '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
+            '🔥','✨','🎉','🎊','🎁','⭐','🌟','💫','😻','🐶',
+            '☕','🍕','🍔','🍎','🎂','⚽','🎮','📱','💻','🚗'
+        ];
+
+        function buildEmojiPickerGrid() {
+            if (emojiPickerGrid.childElementCount) return; // build once
+            const frag = document.createDocumentFragment();
+            COMPOSE_EMOJIS.forEach(emoji => {
+                const cell = document.createElement('div');
+                cell.className = 'emoji-cell';
+                cell.textContent = emoji;
+                cell.addEventListener('click', () => insertEmojiIntoMessage(emoji));
+                frag.appendChild(cell);
+            });
+            emojiPickerGrid.appendChild(frag);
+        }
+
+        function insertEmojiIntoMessage(emoji) {
+            const start = messageInput.selectionStart ?? messageInput.value.length;
+            const end   = messageInput.selectionEnd ?? messageInput.value.length;
+            const text  = messageInput.value;
+            messageInput.value = text.slice(0, start) + emoji + text.slice(end);
+            const caret = start + emoji.length;
+            messageInput.focus();
+            messageInput.setSelectionRange(caret, caret);
+            // Let the existing auto-resize/typing-indicator listeners react normally
+            messageInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+
+        function toggleEmojiPicker() {
+            const isOpen = emojiPickerPanel.classList.contains('open');
+            if (isOpen) {
+                closeEmojiPicker();
+            } else {
+                buildEmojiPickerGrid();
+                emojiPickerPanel.classList.add('open');
+                emojiPickerBtn.classList.add('active');
+            }
+        }
+
+        function closeEmojiPicker() {
+            emojiPickerPanel.classList.remove('open');
+            emojiPickerBtn.classList.remove('active');
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!emojiPickerPanel.classList.contains('open')) return;
+            if (emojiPickerPanel.contains(e.target) || e.target.closest('#emoji-picker-btn')) return;
+            closeEmojiPicker();
+        });
+
+        // Close the picker (rather than leave it floating) once the keyboard
+        // opens for the message box, so it doesn't overlap the caret.
+        messageInput.addEventListener('focus', closeEmojiPicker);
         
         let typingTimeout;
         let isConnected = false;
@@ -2974,6 +3138,7 @@
         function sendMessage() {
             const msg = messageInput.value.trim();
             if(!msg) return;
+            closeEmojiPicker();
 
             // Add temporary ID first
             const tempId = 'temp_' + Date.now();

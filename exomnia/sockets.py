@@ -13,7 +13,7 @@ from .crypto import encryptor
 from .chat_utils import (
     get_room, _file_preview_text, _resolve_display_name,
     _user_online, _broadcast_presence, connected_users, online_users,
-    _add_watcher, _notify_watchers,
+    _add_watcher, _notify_watchers, is_blocked,
 )
 
 typing_status = {}
@@ -157,6 +157,14 @@ def handle_message(data):
             emit('error', {'message': 'Message too long'})
             return
 
+        if is_blocked(sender, receiver):
+            emit('error', {'message': 'You have blocked this contact. Unblock them to send messages.'})
+            return
+        # If the receiver has blocked the sender, don't tip the sender off —
+        # just quietly skip delivering it to the receiver (same behaviour as
+        # most messaging apps: the message still looks "sent" to the sender).
+        receiver_blocked_sender = is_blocked(receiver, sender)
+
         encrypted_message = encryptor.encrypt_message(message, sender, receiver)
         if not encrypted_message:
             emit('error', {'message': 'Failed to encrypt message'})
@@ -185,30 +193,35 @@ def handle_message(data):
         room = get_room(sender, receiver)
         # Invalidate message cache so next page load fetches fresh messages
         cache.clear_pattern(f"msgs_{min(sender,receiver)}_{max(sender,receiver)}")
-        emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'temp_id': temp_id, 'timestamp': now_iso, 'status': 'sent'}, room=room)
 
-        # Fallback delivery: also send the full message to the receiver's
-        # personal room (joined reliably via register_user on every
-        # connect/reconnect). If the receiver's specific chat-room join was
-        # missed or delayed (flaky network, reconnect race, etc.), this
-        # ensures the message still shows up in their open chat window
-        # instead of only updating the contacts-list preview. The client
-        # already dedupes by message id so receiving it twice is harmless.
-        emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'timestamp': now_iso, 'status': 'sent'}, room=f'user_{receiver}')
+        if not receiver_blocked_sender:
+            emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'temp_id': temp_id, 'timestamp': now_iso, 'status': 'sent'}, room=room)
+
+            # Fallback delivery: also send the full message to the receiver's
+            # personal room (joined reliably via register_user on every
+            # connect/reconnect). If the receiver's specific chat-room join was
+            # missed or delayed (flaky network, reconnect race, etc.), this
+            # ensures the message still shows up in their open chat window
+            # instead of only updating the contacts-list preview. The client
+            # already dedupes by message id so receiving it twice is harmless.
+            emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'timestamp': now_iso, 'status': 'sent'}, room=f'user_{receiver}')
 
         # Also send to the sender's personal room so the dashboard can
         # update the contact row in real time when they're on Contacts page
-        emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'timestamp': now_iso, 'status': 'sent'}, room=f'user_{sender}')
+        # (still delivered even if the receiver has blocked the sender, so
+        # the sender's own chat looks normal — same as most messaging apps).
+        emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'temp_id': temp_id, 'timestamp': now_iso, 'status': 'sent'}, room=f'user_{sender}')
 
-        # Notify the receiver everywhere they're connected (dashboard, other open chats, etc.)
-        try:
-            sender_name = _resolve_display_name(receiver, sender)
-            emit('new_message_notification', {
-                'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
-                'preview': message[:120], 'timestamp': now_iso, 'last_sender': sender
-            }, room=f'user_{receiver}')
-        except Exception as ne:
-            print(f"Error emitting message notification: {ne}")
+        if not receiver_blocked_sender:
+            # Notify the receiver everywhere they're connected (dashboard, other open chats, etc.)
+            try:
+                sender_name = _resolve_display_name(receiver, sender)
+                emit('new_message_notification', {
+                    'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
+                    'preview': message[:120], 'timestamp': now_iso, 'last_sender': sender
+                }, room=f'user_{receiver}')
+            except Exception as ne:
+                print(f"Error emitting message notification: {ne}")
         
     except Exception as e:
         print(f" Error in send_message: {e}")
@@ -229,7 +242,26 @@ def handle_file_message(data):
             emit('error', {'message': 'Invalid file message data'})
             return
 
+        if is_blocked(sender, receiver):
+            emit('error', {'message': 'You have blocked this contact. Unblock them to send messages.'})
+            return
+        receiver_blocked_sender = is_blocked(receiver, sender)
+
         room = get_room(sender, receiver)
+        if not receiver_blocked_sender:
+            emit('receive_file_message', {
+                'id': message_id,
+                'sender': sender,
+                'receiver': receiver,
+                'message_type': message_type,
+                'file_path': file_path,
+                'file_name': file_name,
+                'file_size': file_size
+            }, room=room, broadcast=True)
+
+        # Also send to the sender's personal room for dashboard row update
+        # (kept even if the receiver has blocked the sender, so the sender's
+        # own view still looks normal)
         emit('receive_file_message', {
             'id': message_id,
             'sender': sender,
@@ -238,30 +270,22 @@ def handle_file_message(data):
             'file_path': file_path,
             'file_name': file_name,
             'file_size': file_size
-        }, room=room, broadcast=True)
-
-        # Also send to the sender's personal room for dashboard row update
-        emit('receive_file_message', {
-            'id': message_id,
-            'sender': sender,
-            'receiver': receiver,
-            'message_type': message_type,
-            'file_name': file_name
         }, room=f'user_{sender}')
 
         cache.clear_for_users(sender, receiver)
         cache.clear_pattern(f"msgs_{min(sender,receiver)}_{max(sender,receiver)}")
 
-        # Notify the receiver everywhere they're connected
-        try:
-            sender_name = _resolve_display_name(receiver, sender)
-            emit('new_message_notification', {
-                'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
-                'preview': _file_preview_text(message_type, file_name),
-                'timestamp': datetime.now().isoformat(), 'last_sender': sender
-            }, room=f'user_{receiver}')
-        except Exception as ne:
-            print(f"Error emitting file notification: {ne}")
+        if not receiver_blocked_sender:
+            # Notify the receiver everywhere they're connected
+            try:
+                sender_name = _resolve_display_name(receiver, sender)
+                emit('new_message_notification', {
+                    'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
+                    'preview': _file_preview_text(message_type, file_name),
+                    'timestamp': datetime.now().isoformat(), 'last_sender': sender
+                }, room=f'user_{receiver}')
+            except Exception as ne:
+                print(f"Error emitting file notification: {ne}")
 
     except Exception as e:
         print(f"Error in send_file_message: {e}")

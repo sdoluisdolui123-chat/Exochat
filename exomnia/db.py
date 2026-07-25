@@ -236,11 +236,16 @@ def init_db():
                 author_phone TEXT NOT NULL,
                 content TEXT NOT NULL,
                 image_path TEXT DEFAULT \'\',
+                video_path TEXT DEFAULT \'\',
                 likes INTEGER DEFAULT 0,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(author_phone) REFERENCES users(phone)
             )
         """)
+        try:
+            c.execute("ALTER TABLE social_posts ADD COLUMN video_path TEXT DEFAULT ''")
+        except Exception:
+            pass  # already exists
         c.execute("DROP INDEX IF EXISTS idx_social_posts_author")
         c.execute("DROP INDEX IF EXISTS idx_social_posts_ts")
         c.execute("CREATE INDEX IF NOT EXISTS idx_social_posts_author ON social_posts(author_phone, timestamp)")

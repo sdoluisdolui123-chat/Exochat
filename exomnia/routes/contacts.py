@@ -100,3 +100,103 @@ def add_contact():
     except Exception as e:
         print(f" Error in add_contact: {e}")
         return jsonify({"success": False, "error": "An error occurred"}), 500
+
+
+# ----------------- Block / Unblock -----------------
+@app.route("/api/block_contact", methods=["POST"])
+def api_block_contact():
+    data = request.get_json() or {}
+    phone = str(data.get("phone", "")).strip()
+    contact_phone = str(data.get("contact_phone", "")).strip()
+    if not phone or not contact_phone:
+        return jsonify({"success": False, "error": "Phone and contact_phone required"}), 400
+    if phone == contact_phone:
+        return jsonify({"success": False, "error": "Can't block yourself"}), 400
+    now_iso = datetime.now().isoformat()
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute(
+            "INSERT OR IGNORE INTO blocked_contacts(blocker_phone, blocked_phone, created_at) VALUES(?,?,?)",
+            (phone, contact_phone, now_iso),
+        )
+        conn.commit()
+    finally:
+        return_db_connection(conn)
+    return jsonify({"success": True})
+
+
+@app.route("/api/unblock_contact", methods=["POST"])
+def api_unblock_contact():
+    data = request.get_json() or {}
+    phone = str(data.get("phone", "")).strip()
+    contact_phone = str(data.get("contact_phone", "")).strip()
+    if not phone or not contact_phone:
+        return jsonify({"success": False, "error": "Phone and contact_phone required"}), 400
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute(
+            "DELETE FROM blocked_contacts WHERE blocker_phone=? AND blocked_phone=?",
+            (phone, contact_phone),
+        )
+        conn.commit()
+    finally:
+        return_db_connection(conn)
+    return jsonify({"success": True})
+
+
+@app.route("/api/blocked_contacts")
+def api_blocked_contacts():
+    phone = request.args.get("phone", "").strip()
+    if not phone:
+        return jsonify([]), 400
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute("""
+            SELECT b.blocked_phone, b.created_at,
+                   COALESCE(ct.contact_name, ''),
+                   COALESCE(u.avatar_photo, ''), COALESCE(u.avatar_color, '#0E4950'),
+                   COALESCE(u.avatar_emoji, '')
+            FROM blocked_contacts b
+            LEFT JOIN contacts ct ON ct.user_phone = b.blocker_phone AND ct.contact_phone = b.blocked_phone
+            LEFT JOIN users u ON u.phone = b.blocked_phone
+            WHERE b.blocker_phone = ?
+            ORDER BY b.created_at DESC
+        """, (phone,))
+        rows = c.fetchall()
+    finally:
+        return_db_connection(conn)
+    blocked = [{
+        "phone": r[0], "blocked_at": r[1],
+        "name": r[2] or r[0],
+        "avatar_photo": r[3], "avatar_color": r[4], "avatar_emoji": r[5],
+    } for r in rows]
+    return jsonify(blocked)
+
+
+@app.route("/api/is_blocked")
+def api_is_blocked():
+    """Whether `phone` has blocked `contact_phone`, and vice versa — the
+    chat page needs both directions to decide what UI/state to show."""
+    phone = request.args.get("phone", "").strip()
+    contact_phone = request.args.get("contact_phone", "").strip()
+    if not phone or not contact_phone:
+        return jsonify({"error": "Both phone and contact_phone required"}), 400
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute(
+            "SELECT 1 FROM blocked_contacts WHERE blocker_phone=? AND blocked_phone=?",
+            (phone, contact_phone),
+        )
+        i_blocked_them = c.fetchone() is not None
+        c.execute(
+            "SELECT 1 FROM blocked_contacts WHERE blocker_phone=? AND blocked_phone=?",
+            (contact_phone, phone),
+        )
+        they_blocked_me = c.fetchone() is not None
+    finally:
+        return_db_connection(conn)
+    return jsonify({"i_blocked_them": i_blocked_them, "they_blocked_me": they_blocked_me})

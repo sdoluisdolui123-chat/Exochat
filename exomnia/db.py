@@ -1,4 +1,3 @@
-
 """
 SQLite connection pooling and schema initialization.
 """
@@ -110,6 +109,14 @@ def init_db():
                 last_sender TEXT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 PRIMARY KEY(user_phone, contact_phone)
+            )
+        """)
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS blocked_contacts (
+                blocker_phone TEXT NOT NULL,
+                blocked_phone TEXT NOT NULL,
+                created_at TEXT,
+                PRIMARY KEY(blocker_phone, blocked_phone)
             )
         """)
         c.execute("""

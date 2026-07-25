@@ -535,8 +535,9 @@
     }
     .create-post-actions {
       display: flex; justify-content: space-between; align-items: center;
-      margin-top: 10px;
+      margin-top: 10px; gap: 8px; flex-shrink: 0;
     }
+    .create-post-actions .attach-buttons { display: flex; gap: 8px; }
     .post-submit-btn {
       background: linear-gradient(135deg,#0E4950,#1a6b75);
       color: white; border: none; padding: 9px 20px;
@@ -565,6 +566,10 @@
       width: 100%; height: 100%;
       padding: calc(env(safe-area-inset-top,14px) + 14px) 18px calc(24px + env(safe-area-inset-bottom,0px));
       animation: slideUpSheet 0.25s cubic-bezier(.32,1,.55,1) both;
+    }
+    .post-modal-scroll {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
     }
     @keyframes slideUpSheet {
@@ -2976,20 +2981,33 @@
               <span class="post-modal-title">New Post</span>
               <button class="post-modal-close" onclick="closePostModal()">✕</button>
             </div>
-            <div class="create-post-row" style="margin-bottom:10px;flex:1;align-items:flex-start;">
-              <div id="cpAvatarModal" style="width:40px;height:40px;border-radius:50%;background:#0E4950;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;"></div>
-              <textarea id="newPostText" class="create-post-textarea" placeholder="Share something with your network…" rows="4" maxlength="1000" style="flex:1;min-height:220px;"></textarea>
-            </div>
-            <div id="postPhotoPreview" style="display:none;margin-bottom:10px;position:relative;">
-              <img id="postPhotoImg" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;display:block;" alt="">
-              <button onclick="clearPostPhoto()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+            <div class="post-modal-scroll">
+              <div class="create-post-row" style="margin-bottom:10px;align-items:flex-start;">
+                <div id="cpAvatarModal" style="width:40px;height:40px;border-radius:50%;background:#0E4950;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:15px;flex-shrink:0;"></div>
+                <textarea id="newPostText" class="create-post-textarea" placeholder="Share something with your network…" rows="4" maxlength="1000" style="flex:1;min-height:140px;"></textarea>
+              </div>
+              <div id="postPhotoPreview" style="display:none;margin-bottom:10px;position:relative;">
+                <img id="postPhotoImg" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;display:block;" alt="">
+                <button onclick="clearPostPhoto()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+              </div>
+              <div id="postVideoPreview" style="display:none;margin-bottom:10px;position:relative;">
+                <video id="postVideoEl" style="width:100%;max-height:220px;border-radius:10px;display:block;background:#000;" controls></video>
+                <button onclick="clearPostVideo()" style="position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,0.55);border:none;color:white;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+              </div>
             </div>
             <div class="create-post-actions">
-              <label class="photo-attach-btn" for="postPhotoInput">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-                Photo
-              </label>
-              <input type="file" id="postPhotoInput" accept="image/*" style="display:none" onchange="onPostPhotoSelected(this)">
+              <div class="attach-buttons">
+                <label class="photo-attach-btn" for="postPhotoInput">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  Photo
+                </label>
+                <input type="file" id="postPhotoInput" accept="image/*" style="display:none" onchange="onPostPhotoSelected(this)">
+                <label class="photo-attach-btn" for="postVideoInput">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+                  Video
+                </label>
+                <input type="file" id="postVideoInput" accept="video/*" style="display:none" onchange="onPostVideoSelected(this)">
+              </div>
               <button class="post-submit-btn" onclick="submitPost()">Post</button>
             </div>
           </div>
@@ -3210,10 +3228,12 @@
     }
 
     let _postPhotoFile = null;
+    let _postVideoFile = null;
 
     function onPostPhotoSelected(input) {
       const file = input.files[0];
       if (!file) return;
+      clearPostVideo(); // a post carries one media attachment at a time
       _postPhotoFile = file;
       const reader = new FileReader();
       reader.onload = e => {
@@ -3230,9 +3250,33 @@
       document.getElementById('postPhotoInput').value = '';
     }
 
+    function onPostVideoSelected(input) {
+      const file = input.files[0];
+      if (!file) return;
+      const MAX_BYTES = 50 * 1024 * 1024;
+      if (file.size > MAX_BYTES) {
+        showToast('Video too large — max 50MB');
+        input.value = '';
+        return;
+      }
+      clearPostPhoto(); // a post carries one media attachment at a time
+      _postVideoFile = file;
+      const url = URL.createObjectURL(file);
+      document.getElementById('postVideoPreview').style.display = 'block';
+      document.getElementById('postVideoEl').src = url;
+    }
+
+    function clearPostVideo() {
+      _postVideoFile = null;
+      const el = document.getElementById('postVideoEl');
+      if (el && el.src) { URL.revokeObjectURL(el.src); el.src = ''; }
+      document.getElementById('postVideoPreview').style.display = 'none';
+      document.getElementById('postVideoInput').value = '';
+    }
+
     function submitPost() {
       const text = (document.getElementById('newPostText') || {}).value || '';
-      if (!text.trim() && !_postPhotoFile) { showToast('Write something first!'); return; }
+      if (!text.trim() && !_postPhotoFile && !_postVideoFile) { showToast('Write something first!'); return; }
       const myPhone = _socialPhone();
       const btn = document.querySelector('#postCreateModal .post-submit-btn');
       if (btn) { btn.disabled = true; btn.textContent = 'Posting…'; }
@@ -3241,17 +3285,18 @@
       fd.append('phone', myPhone);
       fd.append('content', text.trim());
       if (_postPhotoFile) fd.append('image', _postPhotoFile);
+      if (_postVideoFile) fd.append('video', _postVideoFile);
 
       fetch('/api/social/post', { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
           if (data.success) {
             showToast('Post shared! ✓');
-            _postPhotoFile = null;
             if (btn) { btn.disabled = false; btn.textContent = 'Post'; }
             const ta = document.getElementById('newPostText');
             if (ta) ta.value = '';
             clearPostPhoto();
+            clearPostVideo();
             closePostModal();
             loadSocialFeed();
           } else {
@@ -3277,6 +3322,9 @@
       const imageHtml = p.image_path
         ? `<img class="social-post-image" src="/api/social/image/${p.image_path}" onclick="openSocialImg(this.src)" alt="">`
         : '';
+      const videoHtml = p.video_path
+        ? `<video class="social-post-image" src="/api/social/video/${p.video_path}" controls preload="metadata" style="background:#000;"></video>`
+        : '';
 
       return `
         <div class="social-post-card" id="post_${p.id}">
@@ -3290,6 +3338,7 @@
           </div>
           ${p.content ? `<div class="social-post-content">${escapeHtml(p.content)}</div>` : ''}
           ${imageHtml}
+          ${videoHtml}
           <div class="social-post-actions">
             <button class="social-action-btn ${liked ? 'liked' : ''}" onclick="toggleLike(${p.id},this)">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="${liked ? 'rgba(231,111,81,0.2)' : 'none'}" stroke="${liked ? '#e76f51' : 'currentColor'}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>

@@ -8,6 +8,22 @@ from .db import get_db_connection, return_db_connection
 
 
 # ----------------- Chat helpers -----------------
+def is_blocked(blocker_phone, blocked_phone):
+    """True if blocker_phone has blocked blocked_phone."""
+    if not blocker_phone or not blocked_phone:
+        return False
+    conn = get_db_connection()
+    try:
+        c = conn.cursor()
+        c.execute(
+            "SELECT 1 FROM blocked_contacts WHERE blocker_phone=? AND blocked_phone=?",
+            (blocker_phone, blocked_phone),
+        )
+        return c.fetchone() is not None
+    finally:
+        return_db_connection(conn)
+
+
 def get_room(user, contact):
     """Create consistent room name for two users"""
     try:

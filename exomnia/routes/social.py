@@ -12,6 +12,9 @@ from ..cache import cache
 
 SOCIAL_IMAGE_FOLDER = os.path.join(app.config['UPLOAD_FOLDER'], 'social')
 os.makedirs(SOCIAL_IMAGE_FOLDER, exist_ok=True)
+SOCIAL_VIDEO_FOLDER = os.path.join(app.config['UPLOAD_FOLDER'], 'social_video')
+os.makedirs(SOCIAL_VIDEO_FOLDER, exist_ok=True)
+MAX_POST_VIDEO_BYTES = 50 * 1024 * 1024  # 50MB — keep post videos short/lightweight
 
 
 def _social_user_info(phone, conn):
@@ -38,7 +41,7 @@ def social_feed():
             following = [r[0] for r in c.fetchall()] + [phone]
             placeholders = ','.join('?' * len(following))
             c.execute(f"""
-                SELECT sp.id, sp.author_phone, sp.content, sp.image_path, sp.likes, sp.timestamp
+                SELECT sp.id, sp.author_phone, sp.content, sp.image_path, sp.video_path, sp.likes, sp.timestamp
                 FROM social_posts sp
                 WHERE sp.author_phone IN ({placeholders})
                 ORDER BY sp.timestamp DESC LIMIT 50
@@ -46,7 +49,7 @@ def social_feed():
             posts = c.fetchall()
             result = []
             for row in posts:
-                post_id, author, content, image_path, likes, ts = row
+                post_id, author, content, image_path, video_path, likes, ts = row
                 info = _social_user_info(author, conn)
                 c.execute("SELECT user_phone FROM social_post_likes WHERE post_id=?", (post_id,))
                 liked_by = [r[0] for r in c.fetchall()]
@@ -54,7 +57,7 @@ def social_feed():
                 comment_count = c.fetchone()[0]
                 result.append({
                     "id": post_id, "author_phone": author, "content": content,
-                    "image_path": image_path or "", "likes": likes, "timestamp": ts,
+                    "image_path": image_path or "", "video_path": video_path or "", "likes": likes, "timestamp": ts,
                     "liked_by": liked_by, "comment_count": comment_count,
                     **{k: info[k] for k in ('display_name','avatar_color','avatar_emoji','avatar_photo','headline','bio')}
                 })
@@ -72,7 +75,7 @@ def social_create_post():
         content = request.form.get('content', '').strip()[:1000]
         if not phone:
             return jsonify({'success': False, 'error': 'Phone required'}), 400
-        if not content and 'image' not in request.files:
+        if not content and 'image' not in request.files and 'video' not in request.files:
             return jsonify({'success': False, 'error': 'Content required'}), 400
 
         image_path = ''
@@ -85,11 +88,29 @@ def social_create_post():
                     f.save(os.path.join(SOCIAL_IMAGE_FOLDER, fname))
                     image_path = fname
 
+        video_path = ''
+        if 'video' in request.files:
+            f = request.files['video']
+            if f and f.filename:
+                ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'mp4'
+                if ext in {'mp4', 'webm', 'mov', 'm4v'}:
+                    # Enforce a size cap so one post can't fill up the disk —
+                    # read length via seek since request.content_length covers
+                    # the whole multipart body, not just this one file.
+                    f.stream.seek(0, os.SEEK_END)
+                    size = f.stream.tell()
+                    f.stream.seek(0)
+                    if size > MAX_POST_VIDEO_BYTES:
+                        return jsonify({'success': False, 'error': 'Video too large (max 50MB)'}), 400
+                    fname = f"{uuid.uuid4().hex}.{ext}"
+                    f.save(os.path.join(SOCIAL_VIDEO_FOLDER, fname))
+                    video_path = fname
+
         conn = get_db_connection()
         try:
             c = conn.cursor()
-            c.execute("INSERT INTO social_posts(author_phone, content, image_path) VALUES(?,?,?)",
-                      (phone, content, image_path))
+            c.execute("INSERT INTO social_posts(author_phone, content, image_path, video_path) VALUES(?,?,?,?)",
+                      (phone, content, image_path, video_path))
             conn.commit()
         finally:
             return_db_connection(conn)
@@ -97,6 +118,19 @@ def social_create_post():
     except Exception as e:
         print(f"Error in social_create_post: {e}")
         return jsonify({'success': False, 'error': 'Server error'}), 500
+
+@app.route('/api/social/video/<filename>')
+def social_serve_video(filename):
+    try:
+        safe = os.path.basename(filename)
+        # conditional=True (Flask's default) enables Range requests, which
+        # browsers need to seek/scrub within a video instead of downloading
+        # the whole file before playback can start.
+        resp = send_from_directory(SOCIAL_VIDEO_FOLDER, safe, conditional=True)
+        resp.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        return resp
+    except FileNotFoundError:
+        return "Not found", 404
 
 @app.route('/api/social/image/<filename>')
 def social_serve_image(filename):
@@ -115,11 +149,11 @@ def social_post_page(post_id):
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute("SELECT id, author_phone, content, image_path, likes, timestamp FROM social_posts WHERE id=?", (post_id,))
+        c.execute("SELECT id, author_phone, content, image_path, video_path, likes, timestamp FROM social_posts WHERE id=?", (post_id,))
         row = c.fetchone()
         if not row:
             return "Post not found", 404
-        _pid, author_phone, content, image_path, _likes, timestamp = row
+        _pid, author_phone, content, image_path, video_path, _likes, timestamp = row
         info = _social_user_info(author_phone, conn)
     finally:
         return_db_connection(conn)
@@ -128,6 +162,7 @@ def social_post_page(post_id):
     safe_content = (content or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     safe_name = author_name.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     image_html = f'<img src="/api/social/image/{image_path}" style="width:100%;border-radius:12px;margin:12px 0;display:block;" alt="">' if image_path else ''
+    video_html = f'<video src="/api/social/video/{video_path}" controls style="width:100%;border-radius:12px;margin:12px 0;display:block;"></video>' if video_path else ''
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -155,6 +190,7 @@ def social_post_page(post_id):
     <div class="meta">{timestamp}</div>
     <div class="content">{safe_content}</div>
     {image_html}
+    {video_html}
     <a href="/main" class="open-btn">Open in Exomnia</a>
   </div>
 </body>
@@ -430,17 +466,17 @@ def social_user_posts():
     try:
         c = conn.cursor()
         info = _social_user_info(phone, conn)
-        c.execute("SELECT id, content, image_path, likes, timestamp FROM social_posts WHERE author_phone=? ORDER BY timestamp DESC LIMIT 30", (phone,))
+        c.execute("SELECT id, content, image_path, video_path, likes, timestamp FROM social_posts WHERE author_phone=? ORDER BY timestamp DESC LIMIT 30", (phone,))
         rows = c.fetchall()
         result = []
         for row in rows:
-            post_id, content, image_path, likes, ts = row
+            post_id, content, image_path, video_path, likes, ts = row
             c.execute("SELECT user_phone FROM social_post_likes WHERE post_id=?", (post_id,))
             liked_by = [r[0] for r in c.fetchall()]
             c.execute("SELECT COUNT(*) FROM social_comments WHERE post_id=?", (post_id,))
             comment_count = c.fetchone()[0]
             result.append({"id": post_id, "author_phone": phone, "content": content,
-                           "image_path": image_path or "", "likes": likes, "timestamp": ts,
+                           "image_path": image_path or "", "video_path": video_path or "", "likes": likes, "timestamp": ts,
                            "liked_by": liked_by, "comment_count": comment_count,
                            **{k: info[k] for k in ('display_name','avatar_color','avatar_emoji','avatar_photo','headline','bio')}})
     finally:

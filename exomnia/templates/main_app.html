@@ -901,16 +901,14 @@
       // Desktop two-pane chat view only applies while the Chat tab is open
       document.body.classList.toggle('chat-tab-active', tabName === 'chat');
 
-      // Remove active class from all tabs
+      // Remove active class from all tabs (mobile bottom-nav + desktop rail)
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
 
-      // Add active class to clicked tab
-      if (element) {
-        element.classList.add('active');
-      } else {
-        // If no element provided, find and activate chat tab
-        document.querySelector('.tab[onclick*="chat"]').classList.add('active');
-      }
+      // Activate every tab element for this tab name, so whichever page
+      // we're on, the matching tab stays selected — regardless of whether
+      // openTab was triggered by a click (element given) or programmatically
+      // (e.g. right after signup/login, with no element).
+      document.querySelectorAll(`.tab[onclick*="'${tabName}'"]`).forEach(t => t.classList.add('active'));
 
       let content = document.getElementById('main-content');
       const isLoggedIn = localStorage.getItem('exomnia_user_phone');

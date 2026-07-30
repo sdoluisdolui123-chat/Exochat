@@ -387,12 +387,12 @@
             display: flex;
             padding: 10px 12px calc(14px + env(safe-area-inset-bottom, 0px));
             padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px) + var(--keyboard-offset, 0px));
-            background: #fff;
-            border-top: 1px solid var(--border-color);
+            background: transparent;
+            border-top: none;
             gap: 8px;
             align-items: flex-end;
             min-height: 66px;
-            box-shadow: 0 -4px 20px rgba(14, 73, 80, 0.06);
+            box-shadow: none;
             flex-shrink: 0;
         }
 
@@ -405,7 +405,7 @@
             display: flex;
             align-items: flex-end;
             gap: 0px;
-            background: #f8fafa;
+            background: transparent;
             border: 1.5px solid var(--border-color);
             border-radius: 24px;
             padding: 4px 4px 4px 4px;
@@ -414,7 +414,7 @@
 
         .input-pill:focus-within {
             border-color: var(--accent-color);
-            background: #fff;
+            background: transparent;
             box-shadow: 0 0 0 3px rgba(46, 196, 182, 0.12);
         }
 

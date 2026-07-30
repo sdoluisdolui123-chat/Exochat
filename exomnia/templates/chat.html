@@ -275,7 +275,7 @@
         #chat {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 16px 12px;
+            padding: 20px 16px calc(78px + env(safe-area-inset-bottom, 0px));
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -393,7 +393,11 @@
             align-items: flex-end;
             min-height: 66px;
             box-shadow: none;
-            flex-shrink: 0;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 50;
         }
 
         /* Groups the attach + emoji + textarea into one soft pill, so the
@@ -1591,7 +1595,7 @@
     </div>
 
     <!-- Shown instead of #message-box once this user has blocked the contact -->
-    <div id="blockedBanner" style="display:none; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background:#fff; border-top:1px solid var(--border-color); text-align:center; flex-shrink:0;">
+    <div id="blockedBanner" style="display:none; padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px)); background:#fff; border-top:1px solid var(--border-color); text-align:center; position:fixed; left:0; right:0; bottom:0; z-index:50;">
         <span style="color:var(--text-secondary); font-size:14px;">You blocked this contact.</span>
         <span onclick="onBlockMenuClick()" style="color:var(--accent-color); font-weight:600; font-size:14px; cursor:pointer; margin-left:6px;">Unblock</span>
     </div>

@@ -657,7 +657,7 @@ def handle_set_presence(data):
             try:
                 conn = get_db_connection()
                 cur = conn.cursor()
-                cur.execute("UPDATE users SET last_online = %s WHERE phone = %s", (now_iso, phone))
+                cur.execute("UPDATE users SET last_online = ? WHERE phone = ?", (now_iso, phone))
                 conn.commit()
                 cur.close()
             except Exception as e:

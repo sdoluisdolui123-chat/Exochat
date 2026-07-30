@@ -3635,6 +3635,15 @@
             }
         });
 
+        // Tab/app actually closing or being navigated away from — tell the
+        // server right away so "Last seen" updates instantly instead of
+        // waiting for the socket ping-timeout to notice the disconnect.
+        window.addEventListener('pagehide', function() {
+            if (socket.connected) {
+                socket.emit('set_presence', { phone: String(myPhone), contact: String(contactPhone), status: 'away' });
+            }
+        });
+
         chatDiv.addEventListener('scroll', function() {
             markAllMessagesAsSeen();
         });

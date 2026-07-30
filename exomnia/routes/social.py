@@ -253,12 +253,12 @@ def social_comments():
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute("SELECT id, author_phone, content, timestamp FROM social_comments WHERE post_id=? ORDER BY timestamp ASC LIMIT 100", (post_id,))
+        c.execute("SELECT id, author_phone, content, image_path, timestamp FROM social_comments WHERE post_id=? ORDER BY timestamp ASC LIMIT 100", (post_id,))
         rows = c.fetchall()
         result = []
         for row in rows:
             info = _social_user_info(row[1], conn)
-            result.append({"id": row[0], "author_phone": row[1], "content": row[2], "timestamp": row[3],
+            result.append({"id": row[0], "author_phone": row[1], "content": row[2], "image_path": row[3] or "", "timestamp": row[4],
                            "display_name": info['display_name'], "avatar_color": info['avatar_color'],
                            "avatar_emoji": info['avatar_emoji'], "avatar_photo": info['avatar_photo']})
     finally:
@@ -267,16 +267,40 @@ def social_comments():
 
 @app.route('/api/social/comment', methods=['POST'])
 def social_add_comment():
-    data = request.get_json() or {}
-    post_id = data.get('post_id')
-    phone = data.get('phone', '').strip()
-    content = data.get('content', '').strip()[:500]
-    if not post_id or not phone or not content:
+    # Accept multipart form data (supports an optional attached image) as
+    # well as legacy JSON bodies, so older callers keep working.
+    if request.content_type and 'multipart/form-data' in request.content_type:
+        post_id = request.form.get('post_id', type=int)
+        phone = request.form.get('phone', '').strip()
+        content = request.form.get('content', '').strip()[:500]
+        files = request.files
+    else:
+        data = request.get_json() or {}
+        post_id = data.get('post_id')
+        phone = data.get('phone', '').strip()
+        content = data.get('content', '').strip()[:500]
+        files = {}
+
+    if not post_id or not phone:
         return jsonify({'success': False}), 400
+
+    image_path = ''
+    if 'image' in files:
+        f = files['image']
+        if f and f.filename:
+            ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else 'jpg'
+            if ext in {'jpg', 'jpeg', 'png', 'gif', 'webp'}:
+                fname = f"{uuid.uuid4().hex}.{ext}"
+                f.save(os.path.join(SOCIAL_IMAGE_FOLDER, fname))
+                image_path = fname
+
+    if not content and not image_path:
+        return jsonify({'success': False}), 400
+
     conn = get_db_connection()
     try:
         c = conn.cursor()
-        c.execute("INSERT INTO social_comments(post_id, author_phone, content) VALUES(?,?,?)", (post_id, phone, content))
+        c.execute("INSERT INTO social_comments(post_id, author_phone, content, image_path) VALUES(?,?,?,?)", (post_id, phone, content, image_path))
         conn.commit()
     finally:
         return_db_connection(conn)

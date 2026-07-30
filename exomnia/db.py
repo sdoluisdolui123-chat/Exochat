@@ -280,11 +280,16 @@ def init_db():
                 post_id INTEGER NOT NULL,
                 author_phone TEXT NOT NULL,
                 content TEXT NOT NULL,
+                image_path TEXT DEFAULT '',
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(post_id) REFERENCES social_posts(id),
                 FOREIGN KEY(author_phone) REFERENCES users(phone)
             )
         """)
+        try:
+            c.execute("ALTER TABLE social_comments ADD COLUMN image_path TEXT DEFAULT ''")
+        except Exception:
+            pass  # already exists
         c.execute("CREATE INDEX IF NOT EXISTS idx_social_comments_post ON social_comments(post_id, timestamp)")
 
         # Migration: add headline/location columns to users for social profiles

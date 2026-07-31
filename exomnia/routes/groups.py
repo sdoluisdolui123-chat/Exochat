@@ -70,10 +70,25 @@ def api_delete_contact():
             c = conn.cursor()
             c.execute("DELETE FROM contacts WHERE user_phone=? AND contact_phone=?",
                       (user_phone, contact_phone))
-            # Also stop suggesting this person in Social's "People You may know"
-            c.execute("INSERT OR IGNORE INTO social_dismissed_suggestions(user_phone, dismissed_phone) VALUES(?,?)",
-                      (user_phone, contact_phone))
             conn.commit()
+            # Also stop suggesting this person in Social's "People You may know".
+            # This must never block the contact deletion itself, so it's
+            # isolated in its own try/except (e.g. if the table hasn't been
+            # migrated yet on this server).
+            try:
+                c.execute("""
+                    CREATE TABLE IF NOT EXISTS social_dismissed_suggestions (
+                        user_phone TEXT NOT NULL,
+                        dismissed_phone TEXT NOT NULL,
+                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        PRIMARY KEY(user_phone, dismissed_phone)
+                    )
+                """)
+                c.execute("INSERT OR IGNORE INTO social_dismissed_suggestions(user_phone, dismissed_phone) VALUES(?,?)",
+                          (user_phone, contact_phone))
+                conn.commit()
+            except Exception as e2:
+                print(f"Could not record dismissed suggestion (non-fatal): {e2}")
         finally:
             return_db_connection(conn)
         cache.delete(f"contacts_{user_phone}")

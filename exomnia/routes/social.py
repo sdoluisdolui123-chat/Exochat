@@ -464,6 +464,9 @@ def social_people():
         # Already connected or pending
         c.execute("SELECT following_phone FROM social_connections WHERE follower_phone=?", (phone,))
         already = {r[0] for r in c.fetchall()} | {phone}
+        # People removed from Contacts shouldn't be suggested again
+        c.execute("SELECT dismissed_phone FROM social_dismissed_suggestions WHERE user_phone=?", (phone,))
+        already |= {r[0] for r in c.fetchall()}
         c.execute("SELECT phone, display_name, avatar_color, avatar_emoji, avatar_photo, bio, headline FROM users WHERE phone != ? ORDER BY last_online DESC LIMIT 60", (phone,))
         rows = c.fetchall()
         result = []

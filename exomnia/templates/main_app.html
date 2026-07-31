@@ -1337,7 +1337,7 @@
           </div>
           <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none" onchange="uploadAvatarPhoto(this)">
           <div class="profile-info-block">
-            <div class="profile-display-name">${p.display_name || 'Exomnia User'}</div>
+            <div class="profile-display-name">${p.display_name || 'NEOX User'}</div>
             <div class="profile-bio">${p.bio ? escapeHtml(p.bio) : '<span style="color:#bbb;font-style:italic;">No bio yet</span>'}</div>
           </div>
           <div style="display:flex;justify-content:center;gap:0;border-top:1px solid #f0f0f0;margin-top:14px;border-radius:0 0 24px 24px;overflow:hidden;">
@@ -2570,7 +2570,7 @@
           </div>
           <input type="file" id="avatarPhotoInput" accept="image/*" style="display:none" onchange="uploadAvatarPhoto(this)">
           <div class="profile-info-block">
-            <div class="profile-display-name">${p.display_name || 'Exomnia User'}</div>
+            <div class="profile-display-name">${p.display_name || 'NEOX User'}</div>
             <div class="profile-bio">${p.bio ? escapeHtml(p.bio) : '<span style="color:#bbb;font-style:italic;">No bio yet</span>'}</div>
           </div>
           <div style="display:flex;border-top:1px solid #f0f0f0;margin-top:14px;border-radius:0 0 24px 24px;overflow:hidden;">
@@ -3782,7 +3782,7 @@
       } else {
         people.forEach(p => {
           const status = _socialConnections[p.phone] || 'none';
-          const name = p.display_name || 'Exomnia User';
+          const name = p.display_name || 'NEOX User';
           const avatarHtml = _socialAvatar(p, 48);
           const btnLabel = status === 'connected' ? '✓ Connected'
             : status === 'following' ? 'Following'
@@ -3880,7 +3880,7 @@
         html += `<div class="placeholder-content"><div style="font-size:36px;margin-bottom:8px;">🤝</div><p style="color:#888;">No pending requests</p></div>`;
       } else {
         reqs.forEach(r => {
-          const name = r.display_name || 'Exomnia User';
+          const name = r.display_name || 'NEOX User';
           const avatarHtml = _socialAvatar(r, 44);
           html += `<div class="conn-req-card" id="req_${r.phone.replace(/\\+/g,'_')}">
             <div onclick="openSocialProfile('${r.phone}')" style="cursor:pointer;">${avatarHtml}</div>

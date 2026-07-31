@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1459,11 +1460,14 @@
       const leftBadge = hasLeft
         ? '<span style="font-size:10px;background:#f0f6f6;color:#8aa3a5;border:1px solid #d8e8e8;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:middle;">left</span>'
         : '';
+      const avatarInner = group.avatar_photo
+        ? `<img src="/api/group/image/${group.avatar_photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">`
+        : letter;
 
       return `
         <div class="deletable-row" data-type="group" data-id="${group.id}" data-label="${group.name.replace(/"/g,'&quot;')}" data-action="${actionLabel}" data-last-time="${group.last_message_time || ''}">
           <a href="${hasLeft ? '#' : '/group/' + group.id + '?phone=' + encodeURIComponent(phone)}" class="cx-card" style="text-decoration:none;${hasLeft ? 'pointer-events:none;' : ''}" onclick="${hasLeft ? 'return false;' : ''}">
-            <div class="cx-avatar group-avatar" style="${avatarStyle}">${letter}</div>
+            <div class="cx-avatar group-avatar" style="${avatarStyle}">${avatarInner}</div>
             <div class="cx-body">
               <div class="cx-name" style="${nameStyle}">${group.name}${leftBadge}</div>
               <div class="cx-sub">${memberCount} member${memberCount !== 1 ? 's' : ''}</div>
@@ -1657,6 +1661,19 @@
       <div style="width:36px;height:4px;background:#ccd8d8;border-radius:2px;margin:0 auto 20px;"></div>
       <h3 style="color:#0E4950;font-size:18px;font-weight:700;margin-bottom:6px;">New Group</h3>
       <p style="color:#8aa3a5;font-size:13px;margin-bottom:20px;">Name your group and pick contacts to add.</p>
+
+      <div style="display:flex;justify-content:center;margin-bottom:18px;">
+        <input type="file" id="groupPhotoInput" accept="image/*" style="display:none" onchange="onGroupPhotoSelected(this)">
+        <label for="groupPhotoInput" style="position:relative;width:76px;height:76px;border-radius:50%;cursor:pointer;display:block;">
+          <div id="groupPhotoPreviewWrap" style="width:76px;height:76px;border-radius:50%;background:#eef2f2;border:1.5px dashed #cfe0e0;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+            <svg id="groupPhotoPlaceholderIcon" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8aa3a5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <img id="groupPhotoPreviewImg" style="display:none;width:100%;height:100%;object-fit:cover;" alt="">
+          </div>
+          <div style="position:absolute;bottom:0;right:0;width:26px;height:26px;border-radius:50%;background:#0E4950;border:2px solid #fff;display:flex;align-items:center;justify-content:center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          </div>
+        </label>
+      </div>
 
       <div style="margin-bottom:16px;">
         <label style="display:block;font-size:13px;font-weight:600;color:#4a6567;margin-bottom:6px;">Group Name</label>
@@ -2020,7 +2037,28 @@
 
       const modal = document.getElementById('createGroupModal');
       modal.style.display = 'flex';
+      selectedGroupPhotoFile = null;
+      const gImg = document.getElementById('groupPhotoPreviewImg');
+      const gIcon = document.getElementById('groupPhotoPlaceholderIcon');
+      const gInput = document.getElementById('groupPhotoInput');
+      if (gImg) { gImg.style.display = 'none'; gImg.src = ''; }
+      if (gIcon) gIcon.style.display = 'block';
+      if (gInput) gInput.value = '';
       setTimeout(() => document.getElementById('groupNameInput').focus(), 100);
+    }
+
+    let selectedGroupPhotoFile = null;
+    function onGroupPhotoSelected(inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      selectedGroupPhotoFile = file;
+      const img = document.getElementById('groupPhotoPreviewImg');
+      const icon = document.getElementById('groupPhotoPlaceholderIcon');
+      if (img && icon) {
+        img.src = URL.createObjectURL(file);
+        img.style.display = 'block';
+        icon.style.display = 'none';
+      }
     }
 
     function toggleGroupMember(div, phone) {
@@ -2061,8 +2099,14 @@
 
       fetch('/api/create_group', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, created_by: phone, members: selectedGroupMembers })
+        body: (() => {
+          const fd = new FormData();
+          fd.append('name', name);
+          fd.append('created_by', phone);
+          fd.append('members', JSON.stringify(selectedGroupMembers));
+          if (selectedGroupPhotoFile) fd.append('image', selectedGroupPhotoFile);
+          return fd;
+        })()
       })
       .then(r => r.json())
       .then(data => {

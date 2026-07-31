@@ -266,6 +266,15 @@ def init_db():
         c.execute("CREATE INDEX IF NOT EXISTS idx_social_conn_following ON social_connections(following_phone)")
 
         c.execute("""
+            CREATE TABLE IF NOT EXISTS social_dismissed_suggestions (
+                user_phone TEXT NOT NULL,
+                dismissed_phone TEXT NOT NULL,
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(user_phone, dismissed_phone)
+            )
+        """)
+
+        c.execute("""
             CREATE TABLE IF NOT EXISTS social_post_likes (
                 post_id INTEGER NOT NULL,
                 user_phone TEXT NOT NULL,

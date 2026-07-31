@@ -419,7 +419,7 @@
     <button class="grp-back" onclick="goBack()">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     </button>
-    <div class="grp-avatar" id="grpAvatar">{{ avatar_letter }}</div>
+    <div class="grp-avatar" id="grpAvatar">{% if avatar_photo %}<img src="/api/group/image/{{ avatar_photo }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="">{% else %}{{ avatar_letter }}{% endif %}</div>
     <div class="grp-info">
         <div class="grp-name">{{ group_name }}</div>
         <div class="grp-meta" onclick="openMembersPanel()" id="grpMeta">Loading members…</div>

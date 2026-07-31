@@ -163,9 +163,14 @@ def init_db():
                 name TEXT NOT NULL,
                 created_by TEXT NOT NULL,
                 avatar_letter TEXT,
+                avatar_photo TEXT DEFAULT '',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        try:
+            c.execute("ALTER TABLE groups ADD COLUMN avatar_photo TEXT DEFAULT ''")
+        except Exception:
+            pass  # already exists
         c.execute("""
             CREATE TABLE IF NOT EXISTS group_members (
                 group_id INTEGER,
@@ -331,4 +336,3 @@ def init_db():
         conn.commit()
     finally:
         return_db_connection(conn)
-

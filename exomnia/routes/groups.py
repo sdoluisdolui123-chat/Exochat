@@ -70,6 +70,9 @@ def api_delete_contact():
             c = conn.cursor()
             c.execute("DELETE FROM contacts WHERE user_phone=? AND contact_phone=?",
                       (user_phone, contact_phone))
+            # Also stop suggesting this person in Social's "People You may know"
+            c.execute("INSERT OR IGNORE INTO social_dismissed_suggestions(user_phone, dismissed_phone) VALUES(?,?)",
+                      (user_phone, contact_phone))
             conn.commit()
         finally:
             return_db_connection(conn)

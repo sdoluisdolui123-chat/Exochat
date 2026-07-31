@@ -1,13 +1,36 @@
 """
 Group creation/membership APIs + the group chat page.
 """
+import os
+import uuid
 from datetime import datetime
 
-from flask import render_template, request, jsonify, redirect, url_for
+from flask import render_template, request, jsonify, redirect, url_for, send_from_directory
 
 from ..extensions import app, socketio
 from ..db import get_db_connection, return_db_connection
 from ..cache import cache
+
+GROUP_IMAGE_FOLDER = os.path.join(app.config['UPLOAD_FOLDER'], 'group')
+os.makedirs(GROUP_IMAGE_FOLDER, exist_ok=True)
+ALLOWED_IMAGE_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+
+
+@app.route('/api/group/image/<filename>')
+def group_serve_image(filename):
+    return send_from_directory(GROUP_IMAGE_FOLDER, filename)
+
+
+def _save_group_image(file_storage):
+    """Save an uploaded group photo, returning its stored filename or ''."""
+    if not file_storage or not file_storage.filename:
+        return ''
+    ext = file_storage.filename.rsplit('.', 1)[-1].lower() if '.' in file_storage.filename else 'jpg'
+    if ext not in ALLOWED_IMAGE_EXTENSIONS:
+        return ''
+    fname = f"{uuid.uuid4().hex}.{ext}"
+    file_storage.save(os.path.join(GROUP_IMAGE_FOLDER, fname))
+    return fname
 
 
 # ----------------- Group API Routes -----------------
@@ -35,7 +58,8 @@ def api_groups():
                        (SELECT COUNT(*) FROM group_messages gm4
                         WHERE gm4.group_id = g.id
                           AND gm4.sender != ?) as unread_count,
-                       CASE WHEN gm.user_phone IS NOT NULL THEN 0 ELSE 1 END as left_group
+                       CASE WHEN gm.user_phone IS NOT NULL THEN 0 ELSE 1 END as left_group,
+                       g.avatar_photo
                 FROM groups g
                 LEFT JOIN group_members gm ON g.id = gm.group_id AND gm.user_phone = ?
                 LEFT JOIN group_members gm2 ON g.id = gm2.group_id
@@ -49,7 +73,7 @@ def api_groups():
         groups = [{"id": r[0], "name": r[1], "avatar_letter": r[2],
                    "created_by": r[3], "member_count": r[4], "last_message": r[5],
                    "last_message_time": r[6], "unread_count": r[7] or 0,
-                   "left_group": bool(r[8])} for r in rows]
+                   "left_group": bool(r[8]), "avatar_photo": r[9] or ''} for r in rows]
         cache.set(cache_key, groups)
         return jsonify(groups)
     except Exception as e:
@@ -154,10 +178,21 @@ def api_delete_group():
 @app.route("/api/create_group", methods=["POST"])
 def api_create_group():
     try:
-        data = request.get_json()
-        name = data.get("name", "").strip()
-        created_by = data.get("created_by", "").strip()
-        members = data.get("members", [])
+        image_file = None
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            name = request.form.get("name", "").strip()
+            created_by = request.form.get("created_by", "").strip()
+            import json as _json
+            try:
+                members = _json.loads(request.form.get("members", "[]"))
+            except Exception:
+                members = []
+            image_file = request.files.get('image')
+        else:
+            data = request.get_json() or {}
+            name = data.get("name", "").strip()
+            created_by = data.get("created_by", "").strip()
+            members = data.get("members", [])
 
         if not name or not created_by:
             return jsonify({"success": False, "error": "Missing name or creator"}), 400
@@ -165,6 +200,7 @@ def api_create_group():
             return jsonify({"success": False, "error": "Group name too long"}), 400
 
         avatar_letter = name[0].upper()
+        avatar_photo = _save_group_image(image_file) if image_file else ''
         members_sorted = sorted([str(m).strip() for m in members if str(m).strip() and str(m).strip() != created_by])
         members_key = ','.join(members_sorted)
 
@@ -182,8 +218,8 @@ def api_create_group():
             if existing:
                 group_id = existing[0]
             else:
-                c.execute("INSERT INTO groups (name, created_by, avatar_letter) VALUES (?, ?, ?)",
-                          (name, created_by, avatar_letter))
+                c.execute("INSERT INTO groups (name, created_by, avatar_letter, avatar_photo) VALUES (?, ?, ?, ?)",
+                          (name, created_by, avatar_letter, avatar_photo))
                 group_id = c.lastrowid
 
                 # Add creator as admin
@@ -288,7 +324,7 @@ def api_group_info():
         conn = get_db_connection()
         try:
             c = conn.cursor()
-            c.execute("SELECT id, name, avatar_letter, created_by FROM groups WHERE id=?", (group_id,))
+            c.execute("SELECT id, name, avatar_letter, created_by, avatar_photo FROM groups WHERE id=?", (group_id,))
             g = c.fetchone()
             if not g:
                 return jsonify({}), 404
@@ -302,7 +338,7 @@ def api_group_info():
         finally:
             return_db_connection(conn)
         return jsonify({"id": g[0], "name": g[1], "avatar_letter": g[2],
-                        "created_by": g[3], "members": members})
+                        "created_by": g[3], "avatar_photo": g[4] or '', "members": members})
     except Exception as e:
         print(f"Error in group_info: {e}")
         return jsonify({}), 500
@@ -403,19 +439,21 @@ def group_chat_page(group_id):
             c.execute("SELECT 1 FROM group_members WHERE group_id=? AND user_phone=?", (group_id, phone))
             if not c.fetchone():
                 return "Access denied", 403
-            c.execute("SELECT name, avatar_letter FROM groups WHERE id=?", (group_id,))
+            c.execute("SELECT name, avatar_letter, avatar_photo FROM groups WHERE id=?", (group_id,))
             g = c.fetchone()
             if not g:
                 return "Group not found", 404
             group_name = g[0]
             avatar_letter = g[1] or g[0][0].upper()
+            avatar_photo = g[2] or ''
         finally:
             return_db_connection(conn)
         return render_template("group_chat.html",
                                       phone=phone,
                                       group_id=group_id,
                                       group_name=group_name,
-                                      avatar_letter=avatar_letter)
+                                      avatar_letter=avatar_letter,
+                                      avatar_photo=avatar_photo)
     except Exception as e:
         print(f"Error in group_chat_page: {e}")
         return "An error occurred", 500

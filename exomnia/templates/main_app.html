@@ -38,7 +38,7 @@
       padding: 2px 15px 15px;
       overflow-y: auto;
       transition: 0.3s ease;
-      padding-bottom: calc(75px + env(safe-area-inset-bottom, 0px));
+      padding-bottom: calc(95px + env(safe-area-inset-bottom, 0px));
     }
 
     @keyframes tabFadeIn {
@@ -53,16 +53,17 @@
       display: flex;
       justify-content: space-around;
       background: #fff;
-      padding: 10px 0 calc(12px + env(safe-area-inset-bottom, 0px));
+      padding: 8px 6px;
       color: #0E4950;
       position: fixed;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      width: 100%;
-      box-shadow: 0 -2px 20px rgba(14,73,80,0.10);
+      bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+      left: 14px;
+      right: 14px;
+      width: auto;
+      border-radius: 22px;
+      box-shadow: 0 8px 28px rgba(14,73,80,0.18);
       z-index: 1000;
-      border-top: 1px solid #daeaea;
+      border: 1px solid #eaf3f3;
     }
 
     .tab {
@@ -919,7 +920,7 @@
           loadContacts(isLoggedIn);
         } else {
           content.innerHTML = `
-            <h2> Chat</h2>
+            <h2> Contacts</h2>
             <div class="placeholder-content">
               <p>Please login to access the chat feature</p>
               <button onclick="openChatLogin()" style="background: #0E4950; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px;">

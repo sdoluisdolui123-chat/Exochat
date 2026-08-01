@@ -15,7 +15,7 @@ from .chat_utils import (
     _user_online, _broadcast_presence, connected_users, online_users,
     _add_watcher, _notify_watchers, is_blocked,
 )
-from .push import send_push_to_phone
+from .routes.push import send_push_to_phone
 
 typing_status = {}
 

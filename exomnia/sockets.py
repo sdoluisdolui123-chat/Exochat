@@ -15,6 +15,7 @@ from .chat_utils import (
     _user_online, _broadcast_presence, connected_users, online_users,
     _add_watcher, _notify_watchers, is_blocked,
 )
+from .push import send_push_to_phone
 
 typing_status = {}
 
@@ -220,6 +221,10 @@ def handle_message(data):
                     'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
                     'preview': message[:120], 'timestamp': now_iso, 'last_sender': sender
                 }, room=f'user_{receiver}')
+                # App fully closed/backgrounded (no live socket) — deliver a
+                # real OS/home-screen push instead of relying on the in-app toast.
+                if not online_users.get(receiver):
+                    send_push_to_phone(receiver, sender_name, message[:120] or 'Sent a message', url='/main')
             except Exception as ne:
                 print(f"Error emitting message notification: {ne}")
         
@@ -279,11 +284,14 @@ def handle_file_message(data):
             # Notify the receiver everywhere they're connected
             try:
                 sender_name = _resolve_display_name(receiver, sender)
+                preview = _file_preview_text(message_type, file_name)
                 emit('new_message_notification', {
                     'id': 'dm-' + str(message_id), 'type': 'dm', 'sender': sender, 'sender_name': sender_name,
-                    'preview': _file_preview_text(message_type, file_name),
+                    'preview': preview,
                     'timestamp': datetime.now().isoformat(), 'last_sender': sender
                 }, room=f'user_{receiver}')
+                if not online_users.get(receiver):
+                    send_push_to_phone(receiver, sender_name, preview, url='/main')
             except Exception as ne:
                 print(f"Error emitting file notification: {ne}")
 
@@ -488,6 +496,8 @@ def handle_group_message(data):
                     'sender': sender, 'sender_name': sender_name,
                     'preview': preview, 'timestamp': now_iso
                 }, room=f'user_{member}')
+                if not online_users.get(member):
+                    send_push_to_phone(member, f"{sender_name} · {group_name}", preview, url=f'/group/{group_id}')
         except Exception as ne:
             print(f"Error emitting group notification: {ne}")
 

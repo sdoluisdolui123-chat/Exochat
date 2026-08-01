@@ -154,8 +154,12 @@ def api_delete_group():
                 affected_members = [r[0] for r in c.fetchall()]
                 if user_phone not in affected_members:
                     affected_members.append(user_phone)
-                c.execute("DELETE FROM message_reactions WHERE message_id IN "
-                          "(SELECT id FROM group_messages WHERE group_id=?)", (group_id,))
+                c.execute("SELECT id FROM group_messages WHERE group_id=?", (group_id,))
+                gmsg_ids = [r[0] for r in c.fetchall()]
+                if gmsg_ids:
+                    scoped_ids = [f"grp_{i}" for i in gmsg_ids]
+                    placeholders = ','.join('?' * len(scoped_ids))
+                    c.execute(f"DELETE FROM message_reactions WHERE message_id IN ({placeholders})", scoped_ids)
                 c.execute("DELETE FROM group_messages WHERE group_id=?", (group_id,))
                 c.execute("DELETE FROM group_members WHERE group_id=?", (group_id,))
                 c.execute("DELETE FROM groups WHERE id=?", (group_id,))
@@ -282,18 +286,23 @@ def api_group_messages():
             """, (user_phone, group_id, limit, offset))
             rows = c.fetchall()
 
-            # Fetch reactions for all returned messages in one query
+            # Fetch reactions for all returned messages in one query.
+            # Reactions are stored with a 'grp_' prefix (see sockets.py) so
+            # a group message's numeric id can't collide with a same-numbered
+            # DM/voice message id in the shared message_reactions table.
             msg_ids = [r[0] for r in rows]
             reactions_by_msg = {}
             if msg_ids:
-                placeholders = ','.join('?' * len(msg_ids))
+                scoped_ids = [f"grp_{i}" for i in msg_ids]
+                placeholders = ','.join('?' * len(scoped_ids))
                 c.execute(f"""
                     SELECT message_id, user_phone, emoji
                     FROM message_reactions
                     WHERE message_id IN ({placeholders})
-                """, msg_ids)
+                """, scoped_ids)
                 for rxn in c.fetchall():
-                    reactions_by_msg.setdefault(rxn[0], []).append(
+                    plain_id = int(str(rxn[0]).replace('grp_', ''))
+                    reactions_by_msg.setdefault(plain_id, []).append(
                         {'user_phone': rxn[1], 'emoji': rxn[2]}
                     )
         finally:

@@ -129,56 +129,90 @@
         /* ── Input bar ── */
         #grp-message-box {
             display:flex; padding:10px 12px calc(14px + env(safe-area-inset-bottom,0px));
-            background:#fff; border-top:1px solid var(--border);
+            background:transparent; border-top:none;
             gap:8px; align-items:center; min-height:66px;
-            box-shadow:0 -4px 20px rgba(14,73,80,0.06);
+            box-shadow:none;
             position:fixed; left:0; right:0; bottom:0; z-index:50;
         }
 
-        #grp-message {
-            flex:1; padding:11px 16px; font-size:15px;
-            border:1.5px solid var(--border); border-radius:24px;
-            outline:none; resize:none; max-height:120px;
-            font-family:'DM Sans',inherit; background:#f8fafa;
-            line-height:1.45; overflow-y:auto; min-height:44px;
-            height:auto; white-space:pre-wrap; word-wrap:break-word;
-            color:var(--text); transition:border-color 0.2s,box-shadow 0.2s;
+        .grp-input-pill {
+            flex: 1; min-width: 0; display: flex; align-items: flex-end; gap: 0px;
+            background: transparent; border: 1.5px solid var(--border);
+            border-radius: 24px; padding: 4px 4px 4px 4px;
+            transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
         }
-        #grp-message:focus { border-color:var(--accent); background:#fff; box-shadow:0 0 0 3px rgba(46,196,182,0.12); }
+        .grp-input-pill:focus-within {
+            border-color: var(--accent); background: transparent;
+            box-shadow: 0 0 0 3px rgba(46,196,182,0.12);
+        }
+
+        #grp-message {
+            flex:1; min-width:0; padding:9px 6px; font-size:15px;
+            border:none; outline:none; resize:none; max-height:120px;
+            font-family:'DM Sans',inherit; background:transparent;
+            line-height:1.45; overflow-y:auto; min-height:36px;
+            height:auto; white-space:pre-wrap; word-wrap:break-word;
+            color:var(--text);
+        }
         #grp-message::placeholder { color:var(--light); }
 
-        #grp-send-btn {
-            width:48px; height:48px; border:none; border-radius:50%;
-            background:linear-gradient(135deg,var(--primary),var(--primary-light));
-            color:white; font-size:18px; cursor:pointer;
-            display:flex; align-items:center; justify-content:center;
-            transition:transform 0.15s,box-shadow 0.15s; flex-shrink:0;
-            box-shadow:0 3px 14px rgba(14,73,80,0.35);
+        /* Emoji picker for composing group messages */
+        .grp-emoji-picker-panel {
+            display: none; position: fixed; left: 12px; right: 12px;
+            bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+            max-height: 260px; background: #fff; border: 1px solid var(--border);
+            border-radius: 18px; box-shadow: 0 8px 28px rgba(14,73,80,0.18);
+            padding: 10px; z-index: 51; animation: grpEmojiPanelIn 0.16s ease;
         }
-        #grp-send-btn:hover { transform:scale(1.07); box-shadow:0 5px 18px rgba(14,73,80,0.45); }
-        #grp-send-btn:active { transform:scale(0.93); }
+        .grp-emoji-picker-panel.open { display: block; }
+        @keyframes grpEmojiPanelIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .grp-emoji-picker-grid {
+            display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px;
+            max-height: 238px; overflow-y: auto;
+        }
+        .grp-emoji-picker-grid .grp-emoji-cell {
+            font-size: 21px; display: flex; align-items: center; justify-content: center;
+            aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+            transition: background 0.12s, transform 0.1s; user-select: none;
+        }
+        .grp-emoji-picker-grid .grp-emoji-cell:hover { background: #eef6f6; }
+        .grp-emoji-picker-grid .grp-emoji-cell:active { transform: scale(0.85); }
 
-        #grp-file-btn {
-            width:40px; height:40px; border:none; border-radius:50%;
-            background:#e8f6f5; color:var(--accent);
-            display:flex; align-items:center; justify-content:center;
-            cursor:pointer; flex-shrink:0; transition:background 0.18s,transform 0.15s;
+        #grp-send-btn {
+            width: 40px; height: 40px; min-width: 40px; border: none; border-radius: 50%;
+            background: transparent; color: var(--text-sec); font-size: 18px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, color 0.15s, transform 0.12s; flex-shrink: 0;
+            margin-bottom: 3px;
         }
-        #grp-file-btn:hover { background:#d0efed; transform:scale(1.07); }
-        #grp-file-btn:active { transform:scale(0.93); }
+        #grp-send-btn:hover { background: rgba(46,196,182,0.12); color: var(--accent); }
+        #grp-send-btn:active { transform: scale(0.9); }
+
+        .grp-pill-icon-btn {
+            width: 32px; height: 32px; min-width: 32px; border: none; border-radius: 50%;
+            background: transparent; color: var(--text-sec); cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.15s, color 0.15s, transform 0.12s; flex-shrink: 0;
+            margin-bottom: 3px;
+        }
+        .grp-pill-icon-btn:hover { background: rgba(46,196,182,0.12); color: var(--accent); }
+        .grp-pill-icon-btn:active { transform: scale(0.9); }
+        .grp-pill-icon-btn.active { background: var(--accent); color: #fff; }
 
         #grp-mic-btn {
-            width:48px !important; height:48px !important; border-radius:50% !important;
-            border:none !important;
-            background:linear-gradient(135deg,var(--primary),var(--primary-light)) !important;
-            color:#fff !important; display:flex !important; align-items:center !important;
-            justify-content:center !important; cursor:pointer !important; flex-shrink:0 !important;
-            transition:transform 0.15s,box-shadow 0.15s !important;
-            box-shadow:0 3px 14px rgba(14,73,80,.35) !important;
+            width: 40px !important; height: 40px !important; min-width: 40px !important;
+            border-radius: 50% !important; border: none !important;
+            background: transparent !important; color: var(--text-sec) !important;
+            display: flex !important; align-items: center !important; justify-content: center !important;
+            cursor: pointer !important; flex-shrink: 0 !important; margin-bottom: 3px !important;
+            transition: background 0.15s, color 0.15s, transform 0.12s !important; box-shadow: none !important;
         }
-        #grp-mic-btn:hover  { transform:scale(1.07) !important; }
-        #grp-mic-btn:active { transform:scale(0.93) !important; }
-        #grp-mic-btn.grp-vm-rec { background:#e63946 !important; box-shadow:0 0 0 4px rgba(230,57,70,.25) !important; animation:gvmMicPulse 1s infinite !important; }
+        #grp-mic-btn:hover  { background: rgba(46,196,182,0.12) !important; color: var(--accent) !important; transform: none !important; }
+        #grp-mic-btn:active { transform: scale(0.9) !important; }
+        #grp-mic-btn.grp-vm-rec { background: #e63946 !important; color: #fff !important; box-shadow: 0 0 0 4px rgba(230,57,70,.25) !important; animation: gvmMicPulse 1s infinite !important; }
 
         /* ── Members panel ── */
         #members-panel {
@@ -468,12 +502,22 @@
 </div>
 
 <div id="grp-message-box">
-    <button id="grp-file-btn" onclick="openGrpFileModal()" title="Send file">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    </button>
-    <textarea id="grp-message" placeholder="Message group…" rows="1"></textarea>
+    <div class="grp-input-pill">
+        <button class="grp-pill-icon-btn" id="grp-file-btn" onclick="openGrpFileModal()" title="Send file">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </button>
+        <button class="grp-pill-icon-btn" id="grp-emoji-picker-btn" onclick="toggleGrpEmojiPicker()" title="Emoji">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                <line x1="9" y1="9" x2="9.01" y2="9"/>
+                <line x1="15" y1="9" x2="15.01" y2="9"/>
+            </svg>
+        </button>
+        <textarea id="grp-message" placeholder="Message" rows="1"></textarea>
+    </div>
     <button id="grp-mic-btn" onclick="GVM.toggle()" title="Voice message">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
             <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
             <line x1="12" y1="19" x2="12" y2="23"/>
@@ -481,8 +525,12 @@
         </svg>
     </button>
     <button id="grp-send-btn" onclick="sendGroupMessage()">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white"/></svg>
+        <svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="currentColor"/></svg>
     </button>
+</div>
+
+<div id="grpEmojiPickerPanel" class="grp-emoji-picker-panel">
+    <div class="grp-emoji-picker-grid" id="grpEmojiPickerGrid"></div>
 </div>
 
 <!-- File upload modal (reuses same pattern as 1:1 chat) -->
@@ -596,6 +644,67 @@
     let isConnected = false;
     let typingTimer;
     let groupMembers = [];
+
+    // ── Emoji picker for composing group messages ──────────────────
+    const grpEmojiPickerPanel = document.getElementById('grpEmojiPickerPanel');
+    const grpEmojiPickerGrid  = document.getElementById('grpEmojiPickerGrid');
+    const grpEmojiPickerBtn   = document.getElementById('grp-emoji-picker-btn');
+    const GRP_COMPOSE_EMOJIS = [
+        '😀','😁','😂','🤣','😊','😍','😘','😉','😎','🤩',
+        '🥳','😇','🙂','🙃','😅','😜','🤪','🤔','🤨','😐',
+        '😴','😪','🥱','😢','😭','😡','😱','🤯','🥺','😳',
+        '🙄','😬','🤗','🤭','🤫','😷','🤒','🥵','🥶','😈',
+        '👍','👎','👏','🙌','🙏','💪','🤝','✌️','🤞','👌',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💯',
+        '🔥','✨','🎉','🎊','🎁','⭐','🌟','💫','😻','🐶',
+        '☕','🍕','🍔','🍎','🎂','⚽','🎮','📱','💻','🚗'
+    ];
+
+    function buildGrpEmojiPickerGrid() {
+        if (grpEmojiPickerGrid.childElementCount) return; // build once
+        const frag = document.createDocumentFragment();
+        GRP_COMPOSE_EMOJIS.forEach(emoji => {
+            const cell = document.createElement('div');
+            cell.className = 'grp-emoji-cell';
+            cell.textContent = emoji;
+            cell.addEventListener('click', () => insertGrpEmojiIntoMessage(emoji));
+            frag.appendChild(cell);
+        });
+        grpEmojiPickerGrid.appendChild(frag);
+    }
+
+    function insertGrpEmojiIntoMessage(emoji) {
+        const start = grpInput.selectionStart ?? grpInput.value.length;
+        const end   = grpInput.selectionEnd ?? grpInput.value.length;
+        const text  = grpInput.value;
+        grpInput.value = text.slice(0, start) + emoji + text.slice(end);
+        const caret = start + emoji.length;
+        grpInput.focus();
+        grpInput.setSelectionRange(caret, caret);
+        grpInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function toggleGrpEmojiPicker() {
+        const isOpen = grpEmojiPickerPanel.classList.contains('open');
+        if (isOpen) {
+            closeGrpEmojiPicker();
+        } else {
+            buildGrpEmojiPickerGrid();
+            grpEmojiPickerPanel.classList.add('open');
+            grpEmojiPickerBtn.classList.add('active');
+        }
+    }
+
+    function closeGrpEmojiPicker() {
+        grpEmojiPickerPanel.classList.remove('open');
+        grpEmojiPickerBtn.classList.remove('active');
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!grpEmojiPickerPanel.classList.contains('open')) return;
+        if (grpEmojiPickerPanel.contains(e.target) || e.target.closest('#grp-emoji-picker-btn')) return;
+        closeGrpEmojiPicker();
+    });
 
     // ── Helpers ──────────────────────────────────────────────────
     function goBack() { window.history.back(); }

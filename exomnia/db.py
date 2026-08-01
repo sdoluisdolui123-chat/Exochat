@@ -280,6 +280,17 @@ def init_db():
         """)
 
         c.execute("""
+            CREATE TABLE IF NOT EXISTS push_subscriptions (
+                phone TEXT NOT NULL,
+                endpoint TEXT NOT NULL,
+                p256dh TEXT NOT NULL,
+                auth TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(phone, endpoint)
+            )
+        """)
+
+        c.execute("""
             CREATE TABLE IF NOT EXISTS social_post_likes (
                 post_id INTEGER NOT NULL,
                 user_phone TEXT NOT NULL,

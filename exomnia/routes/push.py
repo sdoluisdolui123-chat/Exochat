@@ -16,8 +16,8 @@ Flow:
 """
 from flask import request, jsonify
 
-from .extensions import app
-from .db import get_db_connection, return_db_connection
+from ..extensions import app
+from ..db import get_db_connection, return_db_connection
 
 try:
     from pywebpush import webpush, WebPushException

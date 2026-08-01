@@ -5,4 +5,5 @@ gevent
 gevent-websocket
 cryptography
 werkzeug
-gunicorn 
+gunicorn
+pywebpush

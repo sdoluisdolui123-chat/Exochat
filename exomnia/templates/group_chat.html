@@ -1095,6 +1095,10 @@
     socket.on('receive_group_message', function(data) {
         if (String(data.group_id) !== String(groupId)) return;
 
+        // Hard dedupe: never render the same persisted message twice,
+        // regardless of how many times the server emits it to this client.
+        if (data.id && document.querySelector('[data-message-id="' + data.id + '"]')) return;
+
         if (String(data.sender) === String(myPhone) && data.temp_id) {
             // Own message confirmed — remove from pending set and render the real bubble
             pendingFileTempIds.delete(data.temp_id);

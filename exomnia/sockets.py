@@ -543,26 +543,32 @@ def handle_add_group_reaction(data):
                     return
                 is_voice = True
 
+            # Reactions are scoped with a 'grp_' prefix so a group message's
+            # numeric id can never collide with a same-numbered DM/voice
+            # message id in the shared message_reactions table (which was
+            # causing reactions to silently toggle off / never appear).
+            scoped_id = f"grp_{message_id}"
+
             c.execute("SELECT emoji FROM message_reactions WHERE message_id=? AND user_phone=?",
-                      (message_id, user_phone))
+                      (scoped_id, user_phone))
             existing = c.fetchone()
 
             if existing:
                 if existing[0] == emoji:
                     c.execute("DELETE FROM message_reactions WHERE message_id=? AND user_phone=?",
-                              (message_id, user_phone))
+                              (scoped_id, user_phone))
                     action = 'removed'
                 else:
                     c.execute("UPDATE message_reactions SET emoji=? WHERE message_id=? AND user_phone=?",
-                              (emoji, message_id, user_phone))
+                              (emoji, scoped_id, user_phone))
                     action = 'updated'
             else:
                 c.execute("INSERT INTO message_reactions (message_id, user_phone, emoji) VALUES (?,?,?)",
-                          (message_id, user_phone, emoji))
+                          (scoped_id, user_phone, emoji))
                 action = 'added'
             conn.commit()
 
-            c.execute("SELECT user_phone, emoji FROM message_reactions WHERE message_id=?", (message_id,))
+            c.execute("SELECT user_phone, emoji FROM message_reactions WHERE message_id=?", (scoped_id,))
             reactions_list = [{'user_phone': r[0], 'emoji': r[1]} for r in c.fetchall()]
         finally:
             return_db_connection(conn)

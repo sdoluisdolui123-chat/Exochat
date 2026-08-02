@@ -19,23 +19,14 @@ from flask import request, jsonify
 from .extensions import app
 from .db import get_db_connection, return_db_connection
 
-try:
-    from pywebpush import webpush, WebPushException
-    _PUSH_AVAILABLE = True
-except Exception:
-    _PUSH_AVAILABLE = False
-
 # VAPID key pair for this app (identifies the server to push services).
 # Public key is exposed to the frontend to create the subscription;
-# private key is used server-side to sign push requests. Not secret in
-# the sense of user data, but keep it stable — rotating it invalidates
-# every existing subscription.
-VAPID_PRIVATE_KEY = """-----BEGIN PRIVATE KEY-----
-MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgNiA4mVOHyx91qXC4
-B6AuWAmq/kReb3jietU4Jq5gg1mhRANCAAT/R+BmoQ2bbPBGUqMKANYyCDJ3IUuQ
-+HtMpYF6dteN6yzfbf4xwHfwDnq5/wFYeNWsNmNHdT9BJLRdujehGHpl
------END PRIVATE KEY-----
-"""
+# private key is used server-side to sign push requests. pywebpush/py_vapid
+# expects the RAW base64url-encoded private key here (not a PEM block —
+# passing the full "-----BEGIN PRIVATE KEY-----..." text fails to parse
+# and silently breaks every push send). Not secret in the sense of user
+# data, but keep it stable — rotating it invalidates every subscription.
+VAPID_PRIVATE_KEY = "NiA4mVOHyx91qXC4B6AuWAmq_kReb3jietU4Jq5gg1k"
 VAPID_PUBLIC_KEY_B64URL = "BP9H4GahDZts8EZSowoA1jIIMnchS5D4e0ylgXp2143rLN9t_jHAd_AOern_AVh41aw2Y0d1P0EktF26N6EYemU"
 VAPID_CLAIMS = {"sub": "mailto:support@exochat.onrender.com"}
 
@@ -93,9 +84,13 @@ def push_unsubscribe():
 def send_push_to_phone(phone, title, body, url='/main', tag=None):
     """Deliver a real OS/home-screen push notification to every device
     `phone` has subscribed from. Safe to call liberally — failures for
-    individual (e.g. expired) subscriptions are swallowed and those
-    subscriptions are cleaned up; it never raises to the caller."""
-    if not _PUSH_AVAILABLE:
+    individual (e.g. expired) subscriptions, or if the push library
+    itself isn't available, are swallowed; it never raises to the caller
+    and can never affect anything else in the app."""
+    try:
+        from pywebpush import webpush, WebPushException
+    except Exception as e:
+        print(f"pywebpush not available, skipping push notification: {e}")
         return
 
     conn = get_db_connection()

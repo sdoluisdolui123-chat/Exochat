@@ -1185,6 +1185,7 @@
         if (banner) banner.style.display = 'none';
         socket.emit('join_group', { group_id: groupId, user: String(myPhone) });
         socket.emit('register_user', { phone: String(myPhone) });
+        socket.emit('set_presence', { phone: String(myPhone), status: document.hidden ? 'away' : 'online' });
         flushGroupOfflineQueue();
     });
 
@@ -1900,6 +1901,9 @@
         function clearTitleBadge() { _unread = 0; document.title = _origTitle; }
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'visible') clearTitleBadge();
+            if (socket.connected) {
+                socket.emit('set_presence', { phone: String(myPhone), status: document.hidden ? 'away' : 'online' });
+            }
         });
 
         window.exomniaNotify = function(data, suppress) {

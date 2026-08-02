@@ -4179,15 +4179,38 @@
       Notification.requestPermission().catch(() => {});
     }
 
-    function showOSNotification(key, title, body, onClick) {
+    function showOSNotification(key, title, body, url) {
       if (!('Notification' in window) || Notification.permission !== 'granted') return;
-      try {
-        // Stable tag per conversation: the OS replaces the previous
-        // notification for this chat instead of stacking a new one for
-        // every message, mirroring how WhatsApp/Messenger group alerts.
-        const n = new Notification(title, { body: body, tag: 'exomnia-' + key });
-        n.onclick = function() { window.focus(); if (onClick) onClick(); n.close(); };
-      } catch(e) {}
+      const tag = 'exomnia-' + key;
+
+      // Android Chrome silently blocks `new Notification(...)` (throws
+      // "Illegal constructor" internally) — it only works through a
+      // service worker there. Prefer the service worker path everywhere
+      // it's available; fall back to the direct constructor only when
+      // there's no service worker (e.g. some desktop browsers). Clicking
+      // is handled by service-worker.js's own 'notificationclick' listener,
+      // which reads notification.data.url and navigates there.
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(reg => {
+          reg.showNotification(title, {
+            body: body,
+            tag: tag,
+            icon: '/static/icons/icon-192.png',
+            badge: '/static/icons/icon-192.png',
+            data: { url: url },
+          }).catch(() => {
+            try {
+              const n = new Notification(title, { body: body, tag: tag });
+              n.onclick = function() { window.focus(); window.location.href = url; n.close(); };
+            } catch (e) {}
+          });
+        });
+      } else {
+        try {
+          const n = new Notification(title, { body: body, tag: tag });
+          n.onclick = function() { window.focus(); window.location.href = url; n.close(); };
+        } catch (e) {}
+      }
     }
 
     const _origTitle = document.title;
@@ -4239,7 +4262,7 @@
       showNotifToast(key, title, body, () => { window.location.href = url; });
       playNotifSound();
       if (document.visibilityState !== 'visible') {
-        showOSNotification(key, title, body, () => { window.location.href = url; });
+        showOSNotification(key, title, body, url);
         bumpTitleBadge();
       }
     };

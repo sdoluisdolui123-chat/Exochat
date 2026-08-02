@@ -133,3 +133,4 @@ def send_push_to_phone(phone, title, body, url='/main', tag=None):
             conn.commit()
     finally:
         return_db_connection(conn)
+

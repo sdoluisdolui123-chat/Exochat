@@ -14,9 +14,8 @@ from . import chat
 from . import groups
 from . import voice
 from . import social
-from . import push
 
 __all__ = [
     "auth", "main", "files", "contacts", "profile",
-    "messages", "chat", "groups", "voice", "social", "push",
+    "messages", "chat", "groups", "voice", "social",
 ]

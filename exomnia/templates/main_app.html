@@ -4326,8 +4326,16 @@
       const notifSocket = io();
       notifSocket.on('connect', () => {
         notifSocket.emit('register_user', { phone: _notifPhone });
+        notifSocket.emit('set_presence', { phone: _notifPhone, status: document.hidden ? 'away' : 'online' });
       });
       notifSocket.on('new_message_notification', data => window.exomniaNotify(data, false));
+
+      // Let the server know when this device is backgrounded/foregrounded,
+      // regardless of which page (Contacts/Social/etc.) is open — this is
+      // what decides whether a real push notification needs to be sent.
+      document.addEventListener('visibilitychange', () => {
+        notifSocket.emit('set_presence', { phone: _notifPhone, status: document.hidden ? 'away' : 'online' });
+      });
 
       // Self-sent message: update sender's own contact row in real time
       notifSocket.on('receive_message', data => {

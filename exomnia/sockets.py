@@ -12,10 +12,10 @@ from .cache import cache
 from .crypto import encryptor
 from .chat_utils import (
     get_room, _file_preview_text, _resolve_display_name,
-    _user_online, _broadcast_presence, connected_users, online_users,
+    _user_online, _broadcast_presence, connected_users, online_users, user_visibility,
     _add_watcher, _notify_watchers, is_blocked,
 )
-from .routes.push import send_push_to_phone
+from .push import send_push_to_phone
 
 typing_status = {}
 
@@ -123,6 +123,7 @@ def on_disconnect(reason=None):
                 online_users[phone].discard(sid)
                 if not online_users[phone]:          # last tab closed
                     del online_users[phone]
+                    user_visibility.pop(phone, None)
                     # Stamp last_online in DB
                     now_iso = datetime.now().isoformat()
                     conn = get_db_connection()
@@ -223,7 +224,7 @@ def handle_message(data):
                 }, room=f'user_{receiver}')
                 # App fully closed/backgrounded (no live socket) — deliver a
                 # real OS/home-screen push instead of relying on the in-app toast.
-                if not online_users.get(receiver):
+                if not online_users.get(receiver) or user_visibility.get(receiver) == 'hidden':
                     send_push_to_phone(receiver, sender_name, message[:120] or 'Sent a message', url='/main')
             except Exception as ne:
                 print(f"Error emitting message notification: {ne}")
@@ -290,7 +291,7 @@ def handle_file_message(data):
                     'preview': preview,
                     'timestamp': datetime.now().isoformat(), 'last_sender': sender
                 }, room=f'user_{receiver}')
-                if not online_users.get(receiver):
+                if not online_users.get(receiver) or user_visibility.get(receiver) == 'hidden':
                     send_push_to_phone(receiver, sender_name, preview, url='/main')
             except Exception as ne:
                 print(f"Error emitting file notification: {ne}")
@@ -496,7 +497,7 @@ def handle_group_message(data):
                     'sender': sender, 'sender_name': sender_name,
                     'preview': preview, 'timestamp': now_iso
                 }, room=f'user_{member}')
-                if not online_users.get(member):
+                if not online_users.get(member) or user_visibility.get(member) == 'hidden':
                     send_push_to_phone(member, f"{sender_name} · {group_name}", preview, url=f'/group/{group_id}')
         except Exception as ne:
             print(f"Error emitting group notification: {ne}")
@@ -661,8 +662,18 @@ def handle_set_presence(data):
         phone   = str(data.get('phone', ''))
         contact = str(data.get('contact', ''))
         status  = data.get('status', 'online')
-        if not phone or not contact:
+        if not phone:
             return
+
+        # Track this phone's foreground/background state globally (not tied
+        # to any specific chat). Used to decide whether a push notification
+        # is still needed even when the socket connection is technically
+        # still alive (many mobile browsers keep it open for a while after
+        # the app is backgrounded).
+        user_visibility[phone] = 'hidden' if status == 'away' else 'visible'
+
+        if not contact:
+            return  # visibility-only ping with no specific chat to update
         now_iso = datetime.now().isoformat()
         if status == 'away':
             # User backed out / minimized the app for this chat. Persist the

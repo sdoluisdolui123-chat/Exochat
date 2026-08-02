@@ -67,6 +67,7 @@ def _resolve_display_name(viewer_phone, target_phone):
 
 connected_users   = {}    # sid -> {phone, room, contact}
 online_users      = {}    # phone -> set of sids  (multiple tabs)
+user_visibility   = {}    # phone -> 'visible' | 'hidden' (tab foreground state)
 presence_watchers = {}    # phone -> set of phones currently interested in this phone's presence
 
 def _user_online(phone):

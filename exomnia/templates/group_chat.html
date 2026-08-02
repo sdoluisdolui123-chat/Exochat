@@ -1887,12 +1887,32 @@
             Notification.requestPermission().catch(() => {});
         }
 
-        function showOSNotification(key, title, body, onClick) {
+        function showOSNotification(key, title, body, url) {
             if (!('Notification' in window) || Notification.permission !== 'granted') return;
-            try {
-                const n = new Notification(title, { body: body, tag: 'exomnia-' + key });
-                n.onclick = function() { window.focus(); if (onClick) onClick(); n.close(); };
-            } catch(e) {}
+            const tag = 'exomnia-' + key;
+            // Android Chrome silently blocks `new Notification(...)` — it
+            // only works through a service worker there. Clicking is
+            // handled by service-worker.js's 'notificationclick' listener.
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(reg => {
+                    reg.showNotification(title, {
+                        body: body, tag: tag,
+                        icon: '/static/icons/icon-192.png',
+                        badge: '/static/icons/icon-192.png',
+                        data: { url: url },
+                    }).catch(() => {
+                        try {
+                            const n = new Notification(title, { body: body, tag: tag });
+                            n.onclick = function() { window.focus(); window.location.href = url; n.close(); };
+                        } catch (e) {}
+                    });
+                });
+            } else {
+                try {
+                    const n = new Notification(title, { body: body, tag: tag });
+                    n.onclick = function() { window.focus(); window.location.href = url; n.close(); };
+                } catch (e) {}
+            }
         }
 
         const _origTitle = document.title;
@@ -1938,7 +1958,7 @@
             showNotifToast(key, title, body, () => { window.location.href = url; });
             playNotifSound();
             if (document.visibilityState !== 'visible') {
-                showOSNotification(key, title, body, () => { window.location.href = url; });
+                showOSNotification(key, title, body, url);
                 bumpTitleBadge();
             }
         };

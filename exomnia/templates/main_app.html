@@ -4408,15 +4408,29 @@
 
       navigator.serviceWorker.register('/static/service-worker.js').then((reg) => {
         rpt('SW register() resolved. State: ' + (reg.installing ? 'installing' : reg.waiting ? 'waiting' : reg.active ? 'active' : 'unknown'));
-        // register()'s promise resolves once the registration exists, but the
-        // worker may still be installing/waiting at that point — PushManager
-        // requires an ACTIVE worker. `.ready` resolves only once that's true.
-        return navigator.serviceWorker.ready;
-      }).then(activeReg => {
-        rpt('SW is now active/ready. Proceeding to push setup...');
-        setupPushNotifications(activeReg);
+
+        if (reg.active) {
+          rpt('Already active — proceeding to push setup...');
+          setupPushNotifications(reg);
+          return;
+        }
+
+        // Not active yet — watch the specific worker's own state instead of
+        // navigator.serviceWorker.ready, which can hang in some cases.
+        const worker = reg.installing || reg.waiting;
+        if (!worker) { rpt('No installing/waiting/active worker on this registration.'); return; }
+        worker.addEventListener('statechange', function onChange() {
+          rpt('SW state changed to: ' + worker.state);
+          if (worker.state === 'activated') {
+            worker.removeEventListener('statechange', onChange);
+            setupPushNotifications(reg);
+          } else if (worker.state === 'redundant') {
+            worker.removeEventListener('statechange', onChange);
+            rpt('SW became redundant (install failed) — cannot proceed.');
+          }
+        });
       }).catch(err => {
-        rpt('SW registration/ready FAILED: ' + (err && err.message ? err.message : err));
+        rpt('SW registration FAILED: ' + (err && err.message ? err.message : err));
       });
     });
   }

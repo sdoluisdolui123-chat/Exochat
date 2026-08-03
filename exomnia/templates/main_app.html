@@ -4402,15 +4402,21 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/static/service-worker.js').then(() => {
+      const dbg = new URLSearchParams(location.search).get('pushdebug') === '1';
+      const rpt = (msg) => { console.warn('[push]', msg); if (dbg) alert('[push] ' + msg); };
+      rpt('load event fired, starting SW registration...');
+
+      navigator.serviceWorker.register('/static/service-worker.js').then((reg) => {
+        rpt('SW register() resolved. State: ' + (reg.installing ? 'installing' : reg.waiting ? 'waiting' : reg.active ? 'active' : 'unknown'));
         // register()'s promise resolves once the registration exists, but the
         // worker may still be installing/waiting at that point — PushManager
         // requires an ACTIVE worker. `.ready` resolves only once that's true.
         return navigator.serviceWorker.ready;
       }).then(activeReg => {
+        rpt('SW is now active/ready. Proceeding to push setup...');
         setupPushNotifications(activeReg);
       }).catch(err => {
-        console.warn('Service worker registration failed:', err);
+        rpt('SW registration/ready FAILED: ' + (err && err.message ? err.message : err));
       });
     });
   }

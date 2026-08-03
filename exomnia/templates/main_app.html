@@ -4423,17 +4423,21 @@
   // up as real OS/home-screen notifications, even when the app is fully
   // closed — not just as an in-app toast while it's open.
   async function setupPushNotifications(registration) {
+    const dbg = new URLSearchParams(location.search).get('pushdebug') === '1';
+    const report = (msg) => { console.warn('[push]', msg); if (dbg) alert('[push] ' + msg); };
+
     try {
       const myPhone = localStorage.getItem('exomnia_user_phone');
-      if (!myPhone) return; // not logged in yet
-      if (!('PushManager' in window) || !('Notification' in window)) return;
-      if (Notification.permission === 'denied') return;
+      if (!myPhone) { report('Not logged in yet (no exomnia_user_phone in localStorage) — skipping.'); return; }
+      if (!('PushManager' in window) || !('Notification' in window)) { report('PushManager/Notification API not supported on this browser.'); return; }
+      if (Notification.permission === 'denied') { report('Notification permission is DENIED. Enable it in Chrome site settings for this page.'); return; }
 
       let permission = Notification.permission;
       if (permission === 'default') {
         permission = await Notification.requestPermission();
+        report('Permission prompt result: ' + permission);
       }
-      if (permission !== 'granted') return;
+      if (permission !== 'granted') { report('Permission not granted (' + permission + ') — cannot subscribe.'); return; }
 
       let sub = await registration.pushManager.getSubscription();
       if (!sub) {
@@ -4443,15 +4447,20 @@
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(key)
         });
+        report('Created new push subscription.');
+      } else {
+        report('Reusing existing push subscription.');
       }
 
-      await fetch('/api/push/subscribe', {
+      const subRes = await fetch('/api/push/subscribe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone: myPhone, subscription: sub.toJSON() })
       });
+      const subJson = await subRes.json().catch(() => ({}));
+      report('Sent subscription to server for phone ' + myPhone + '. Server responded: ' + JSON.stringify(subJson));
     } catch (e) {
-      console.warn('Push notification setup failed:', e);
+      report('FAILED: ' + (e && e.message ? e.message : e));
     }
   }
 </script>

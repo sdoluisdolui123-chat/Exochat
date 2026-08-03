@@ -4402,8 +4402,13 @@
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('/static/service-worker.js').then(reg => {
-        setupPushNotifications(reg);
+      navigator.serviceWorker.register('/static/service-worker.js').then(() => {
+        // register()'s promise resolves once the registration exists, but the
+        // worker may still be installing/waiting at that point — PushManager
+        // requires an ACTIVE worker. `.ready` resolves only once that's true.
+        return navigator.serviceWorker.ready;
+      }).then(activeReg => {
+        setupPushNotifications(activeReg);
       }).catch(err => {
         console.warn('Service worker registration failed:', err);
       });

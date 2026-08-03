@@ -14,7 +14,20 @@ const STATIC_ASSETS = [
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(STATIC_ASSETS))
+      .then(cache => {
+        // Cache each asset independently — if one 404s or fails to fetch,
+        // that alone must NEVER block the service worker from installing
+        // and activating (cache.addAll() is all-or-nothing and was doing
+        // exactly that, leaving the worker stuck in "installing" forever
+        // and breaking Web Push subscription).
+        return Promise.all(
+          STATIC_ASSETS.map(url =>
+            cache.add(url).catch(err => {
+              console.warn('[service-worker] Could not pre-cache', url, err);
+            })
+          )
+        );
+      })
       .then(() => self.skipWaiting())
   );
 });

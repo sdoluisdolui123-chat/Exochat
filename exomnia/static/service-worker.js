@@ -79,7 +79,17 @@ self.addEventListener('push', event => {
     vibrate: [100, 50, 100],
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      // Skip the OS banner only if the app is already open AND focused right
+      // now — the in-app code handles that case itself. Any other state
+      // (backgrounded, locked, closed, or just not focused) always shows it,
+      // so a single message reliably notifies, with no server-side delay.
+      const isAppFocused = clientList.some(c => c.visibilityState === 'visible' && c.focused);
+      if (isAppFocused) return;
+      return self.registration.showNotification(title, options);
+    })
+  );
 });
 
 // Tapping the notification focuses an already-open tab if there is one,

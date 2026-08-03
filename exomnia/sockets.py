@@ -224,8 +224,14 @@ def handle_message(data):
                 }, room=f'user_{receiver}')
                 # App fully closed/backgrounded (no live socket) — deliver a
                 # real OS/home-screen push instead of relying on the in-app toast.
-                if not online_users.get(receiver) or user_visibility.get(receiver) == 'hidden':
-                    send_push_to_phone(receiver, sender_name, message[:120] or 'Sent a message', url='/main')
+                # Always push immediately — no online/visibility gate here,
+                # since that check has to round-trip through the socket layer
+                # and can race with the message itself (e.g. right as the app
+                # backgrounds), silently skipping the very message that
+                # should have triggered it. The service worker's own 'push'
+                # handler decides client-side (with zero latency) whether a
+                # visible window already covers it.
+                send_push_to_phone(receiver, sender_name, message[:120] or 'Sent a message', url='/main')
             except Exception as ne:
                 print(f"Error emitting message notification: {ne}")
         
@@ -291,8 +297,8 @@ def handle_file_message(data):
                     'preview': preview,
                     'timestamp': datetime.now().isoformat(), 'last_sender': sender
                 }, room=f'user_{receiver}')
-                if not online_users.get(receiver) or user_visibility.get(receiver) == 'hidden':
-                    send_push_to_phone(receiver, sender_name, preview, url='/main')
+                # Always push immediately — see comment above.
+                send_push_to_phone(receiver, sender_name, preview, url='/main')
             except Exception as ne:
                 print(f"Error emitting file notification: {ne}")
 
@@ -497,8 +503,8 @@ def handle_group_message(data):
                     'sender': sender, 'sender_name': sender_name,
                     'preview': preview, 'timestamp': now_iso
                 }, room=f'user_{member}')
-                if not online_users.get(member) or user_visibility.get(member) == 'hidden':
-                    send_push_to_phone(member, f"{sender_name} · {group_name}", preview, url=f'/group/{group_id}')
+                # Always push immediately — see comment above.
+                send_push_to_phone(member, f"{sender_name} · {group_name}", preview, url=f'/group/{group_id}')
         except Exception as ne:
             print(f"Error emitting group notification: {ne}")
 

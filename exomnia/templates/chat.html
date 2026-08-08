@@ -275,7 +275,7 @@
         #chat {
             flex: 1;
             overflow-y: auto;
-            padding: 20px 16px calc(78px + env(safe-area-inset-bottom, 0px));
+            padding: 20px 16px 20px;
             display: flex;
             flex-direction: column;
             gap: 4px;
@@ -311,8 +311,7 @@
         }
 
         .bubble {
-            padding: 11px 15px;
-            border-radius: 20px;
+            padding: 8px 12px;
             margin: 2px 0;
             font-size: 15px;
             line-height: 1.5;
@@ -324,8 +323,20 @@
             max-width: 100%;
             user-select: none;
             -webkit-user-select: none;
-            transition: transform 0.1s ease;
-            will-change: transform;
+            border-radius: var(--radius-bubble);
+            box-shadow: 0 1px 2px rgba(14, 73, 80, 0.06);
+        }
+
+        .bubble.sent {
+            background: var(--sent-bubble);
+            border: 1px solid var(--sent-bubble-border);
+            border-bottom-right-radius: 5px;
+        }
+
+        .bubble.received {
+            background: var(--received-bubble);
+            border: 1px solid rgba(14, 73, 80, 0.06);
+            border-bottom-left-radius: 5px;
         }
 
         .bubble.media-message {
@@ -333,28 +344,14 @@
             overflow: hidden;
         }
 
-        .bubble:active {
-            transform: scale(0.985);
-        }
-
         .sent {
-            background: linear-gradient(135deg, #d4f5ef 0%, #c8ede7 100%);
-            border-bottom-right-radius: 5px;
-            border: 1px solid rgba(46, 196, 182, 0.2);
-            box-shadow: 0 1px 4px rgba(14, 73, 80, 0.08);
+            color: var(--text-color);
+            text-align: right;
         }
 
         .received {
-            background: #ffffff;
-            border-bottom-left-radius: 5px;
-            border: 1px solid #e8eeee;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-        }
-
-        @media (hover: hover) {
-            .bubble:hover {
-                box-shadow: 0 3px 10px rgba(14, 73, 80, 0.12);
-            }
+            color: var(--text-color);
+            text-align: left;
         }
 
         .status {
@@ -439,10 +436,7 @@
             align-items: flex-end;
             min-height: 66px;
             box-shadow: none;
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            flex-shrink: 0;
             z-index: 50;
         }
 
@@ -2025,16 +2019,13 @@
             scrollToBottom(false);
         }
 
-        // ── Keep the last message from ever hiding behind the fixed
-        //    compose bar — measure its real height instead of guessing. ──
-        function syncMessageBoxOffset() {
-            if (messageBox && chatDiv) {
-                // Extra margin (was +3px) so rounding/paint timing on real
-                // devices never leaves the last sliver of a bubble tucked
-                // under the compose bar.
-                chatDiv.style.paddingBottom = (messageBox.offsetHeight + 16) + 'px';
-            }
-        }
+        // ── #message-box is now a normal (non-fixed) flex item at the
+        //    bottom of the page, so the browser itself reserves exactly the
+        //    right amount of space above it — no manual height math needed
+        //    or wanted anymore. This is kept as a no-op (rather than
+        //    deleted) purely so the many existing call sites below don't
+        //    need touching; it intentionally does nothing now. ──
+        function syncMessageBoxOffset() {}
         function syncMessageBoxOffsetAndScroll() {
             syncMessageBoxOffset();
             scrollToBottom(false);
@@ -2717,23 +2708,15 @@
 
         // Load messages from API
         //
-        // scrollToBottom always re-measures the compose bar's real height
-        // first (syncMessageBoxOffset), THEN scrolls. Every call site in the
-        // file (new sent message, incoming message, media upload, etc.) goes
-        // through this one function, so none of them can go stale — the old
-        // bug was that padding-bottom only got recalculated on page load /
-        // window resize, so a freshly-sent bubble could scroll to the
-        // "bottom" while its last few pixels were still tucked under the
-        // fixed message box.
+        // The compose bar is a normal (non-fixed) flex item now, so the
+        // browser always reserves exactly the right space above it — this
+        // just needs to push scroll to the true bottom. Runs on two frames
+        // so it also catches layout that finishes a beat late (status
+        // ticks, wrapped text).
         function scrollToBottom(smooth = false) {
             requestAnimationFrame(() => {
-                syncMessageBoxOffset();
                 chatDiv.scrollTop = chatDiv.scrollHeight;
-                // Do it again one frame later — covers cases where the
-                // bubble's own layout (e.g. status ticks, wrapped text)
-                // hasn't finished painting on the first frame.
                 requestAnimationFrame(() => {
-                    syncMessageBoxOffset();
                     chatDiv.scrollTop = chatDiv.scrollHeight;
                 });
             });

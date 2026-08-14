@@ -4,6 +4,14 @@
     <meta charset="UTF-8">
     <title>Chat</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content">
+    <script>
+        // Set the real viewport height as early as possible (before first
+        // paint) so the compose bar never briefly renders below the fold.
+        (function () {
+            var h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', h + 'px');
+        })();
+    </script>
     <link rel="manifest" href="/static/manifest.json">
     <meta name="theme-color" content="#0E4950">
     <link rel="icon" href="/static/icons/icon-192.png">
@@ -53,6 +61,13 @@
             flex-direction: column;
             height: 100vh;
             height: 100dvh;
+            /* JS keeps --app-height in sync with the real visible viewport
+               (window.visualViewport.height). On some Android WebViews,
+               100dvh reports a taller-than-actually-visible height right
+               after page load — until the first tap forces a reflow — which
+               pushes #message-box below the fold. Pinning the height to a
+               JS-measured pixel value sidesteps that dvh lag entirely. */
+            height: var(--app-height, 100dvh);
             min-height: -webkit-fill-available;
             background: var(--chat-bg);
             color: var(--text-color);
@@ -3822,6 +3837,25 @@
         // On mobile, when the soft keyboard opens the visual viewport shrinks.
         // We use visualViewport API (supported in all modern browsers) to keep
         // the message-box anchored above the keyboard at all times.
+        // Keep body's real height pinned to what's actually visible, so the
+        // compose bar can never end up parked below the fold on load (see
+        // --app-height comment in the CSS above).
+        function setAppHeight() {
+            const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+            document.documentElement.style.setProperty('--app-height', h + 'px');
+        }
+        setAppHeight();
+        window.addEventListener('load', setAppHeight);
+        window.addEventListener('resize', setAppHeight);
+        window.addEventListener('orientationchange', () => setTimeout(setAppHeight, 50));
+        window.addEventListener('pageshow', setAppHeight);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) setAppHeight(); });
+        // A couple of delayed re-checks catch WebViews that settle their
+        // real viewport size slightly after the above events fire.
+        setTimeout(setAppHeight, 100);
+        setTimeout(setAppHeight, 400);
+        setTimeout(setAppHeight, 1000);
+
         if (window.visualViewport) {
             function onViewportChange() {
                 const vv = window.visualViewport;
@@ -3829,6 +3863,7 @@
                 const keyboardHeight = window.innerHeight - vv.height - vv.offsetTop;
                 const offset = Math.max(0, keyboardHeight);
                 document.body.style.setProperty('--keyboard-offset', offset + 'px');
+                setAppHeight();
                 syncMessageBoxOffset();
             }
             window.visualViewport.addEventListener('resize', onViewportChange);

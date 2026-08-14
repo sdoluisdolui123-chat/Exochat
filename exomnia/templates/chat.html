@@ -425,9 +425,10 @@
         }
 
         .typing-pen {
-            font-size: 14px;
-            line-height: 1;
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
             animation: penWiggle 0.9s ease-in-out infinite;
             transform-origin: 70% 70%;
         }
@@ -3451,7 +3452,7 @@
 
         socket.on('typing', data=>{
             if(data.actor === contactPhone) {
-                typingDiv.innerHTML = '<span class="typing-pen">🖋️</span><span class="typing-dots"><span></span><span></span><span></span></span>';
+                typingDiv.innerHTML = '<span class="typing-pen"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></span><span class="typing-dots"><span></span><span></span><span></span></span>';
             }
         });
 

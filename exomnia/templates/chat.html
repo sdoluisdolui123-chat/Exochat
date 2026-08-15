@@ -2881,9 +2881,21 @@
         const MAX_CONNECTION_ATTEMPTS = 5;
 
         // ── Presence helpers ─────────────────────────────────────────
+        // The server stamps "last_online" in UTC with a trailing 'Z'. If a
+        // timestamp ever comes through without an explicit timezone (e.g.
+        // an older record), treat it as UTC too rather than letting the
+        // browser assume it's local time — that mismatch is what used to
+        // make "last seen" jump by several hours (e.g. showing "6 hours
+        // ago" for someone who had literally just gone offline).
+        function parseServerTime(isoStr) {
+            if (!isoStr) return null;
+            const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(isoStr);
+            return new Date(hasTZ ? isoStr : isoStr + 'Z');
+        }
+
         function formatLastSeen(isoStr) {
             if (!isoStr) return 'Offline';
-            const diff = Math.floor((Date.now() - new Date(isoStr)) / 1000);
+            const diff = Math.floor((Date.now() - parseServerTime(isoStr)) / 1000);
             if (diff < 60)  return 'Last seen just now';
             if (diff < 3600) {
                 const m = Math.floor(diff / 60);

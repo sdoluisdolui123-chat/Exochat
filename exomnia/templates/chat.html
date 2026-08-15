@@ -334,6 +334,13 @@
             max-width: min(72vw, 320px);
         }
 
+        /* File bubbles — a compact fixed-feeling card, not shrink-to-fit
+           (shrink-to-fit + a flex:1 filename column is what made filenames
+           collapse to one character per line). */
+        .message-group:has(.file-message) {
+            max-width: min(75vw, 300px);
+        }
+
         .sent-group {
             align-self: flex-end;
             align-items: flex-end;
@@ -903,6 +910,7 @@
             border-radius: 16px;
             border: 1px solid #e9ecef;
             transition: all 0.3s ease;
+            min-width: 230px;
         }
 
         .file-message:hover {
@@ -928,7 +936,7 @@
 
         .file-info {
             flex: 1;
-            min-width: 0;
+            min-width: 110px;
         }
 
         .file-name {

@@ -10,6 +10,7 @@ from flask import render_template, request, jsonify, redirect, url_for, send_fro
 from ..extensions import app, socketio
 from ..db import get_db_connection, return_db_connection
 from ..cache import cache
+from ..utils import utc_now_iso
 
 GROUP_IMAGE_FOLDER = os.path.join(app.config['UPLOAD_FOLDER'], 'group')
 os.makedirs(GROUP_IMAGE_FOLDER, exist_ok=True)
@@ -234,7 +235,7 @@ def api_create_group():
                     m = str(m).strip()
                     if m and m != created_by:
                         c.execute("INSERT OR IGNORE INTO users(phone, last_online) VALUES(?, ?)",
-                                  (m, datetime.now().isoformat()))
+                                  (m, utc_now_iso()))
                         c.execute("INSERT OR IGNORE INTO group_members (group_id, user_phone) VALUES (?, ?)",
                                   (group_id, m))
                 conn.commit()
@@ -413,7 +414,7 @@ def api_add_group_members():
             if not row or row[0] != 'admin':
                 return jsonify({"success": False, "error": "Only admins can add members"}), 403
 
-            now_iso = datetime.now().isoformat()
+            now_iso = utc_now_iso()
             added = 0
             for phone in members:
                 phone = str(phone).strip()

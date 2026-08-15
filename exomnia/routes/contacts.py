@@ -8,7 +8,7 @@ from flask import request, jsonify
 from ..extensions import app
 from ..db import get_db_connection, return_db_connection
 from ..cache import cache
-from ..utils import validate_phone
+from ..utils import validate_phone, utc_now_iso
 
 
 # ----------------- Contacts API -----------------
@@ -79,7 +79,7 @@ def add_contact():
         if not validate_phone(full_contact_phone):
             return jsonify({"success": False, "error": "Please enter valid phone number"}), 400
 
-        now_iso = datetime.now().isoformat()
+        now_iso = utc_now_iso()
         conn = get_db_connection()
         try:
             c = conn.cursor()

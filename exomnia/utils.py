@@ -3,10 +3,27 @@ Small shared helpers: rate limiting, file-extension checks, phone validation.
 """
 import re
 import time
+from datetime import datetime, timezone
 from functools import wraps
 from collections import defaultdict
 
 from flask import request, jsonify
+
+
+def utc_now_iso():
+    """Current time as a UTC ISO-8601 string with an explicit 'Z' suffix.
+
+    Presence/"last seen" timestamps must be timezone-unambiguous: the
+    frontend does `new Date(isoStr)` in the user's browser, and a naive
+    string with no 'Z'/offset (e.g. from `datetime.now().isoformat()`) gets
+    interpreted as *local browser time* instead of the server's time. For a
+    user several hours off from the server's clock, that silently shifts
+    "last seen" by that same number of hours (e.g. showing "last seen 6
+    hours ago" for someone who just went offline). Always stamping presence
+    times in UTC with 'Z' keeps the frontend's diff-from-now math correct
+    regardless of either side's timezone.
+    """
+    return datetime.now(timezone.utc).isoformat(timespec='seconds').replace('+00:00', 'Z')
 
 
 # Rate limiting
@@ -69,4 +86,3 @@ def generate_reset_code():
     """6-digit numeric code for password-reset emails."""
     import secrets
     return f"{secrets.randbelow(1000000):06d}"
-

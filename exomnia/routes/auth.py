@@ -8,7 +8,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from ..extensions import app
 from ..db import get_db_connection, return_db_connection
-from ..utils import validate_phone, validate_email, generate_reset_code
+from ..utils import validate_phone, validate_email, generate_reset_code, utc_now_iso
 from ..email_utils import send_reset_code_email
 
 
@@ -41,7 +41,7 @@ def signup():
             return render_template('signup.html', error="Passwords do not match")
 
         try:
-            now_iso   = datetime.now().isoformat()
+            now_iso   = utc_now_iso()
             pwd_hash  = generate_password_hash(password)
             conn = get_db_connection()
             try:
@@ -85,7 +85,7 @@ def signin():
             return render_template('signin.html', error="Please enter your password")
 
         try:
-            now_iso = datetime.now().isoformat()
+            now_iso = utc_now_iso()
             conn = get_db_connection()
             try:
                 c = conn.cursor()

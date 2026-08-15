@@ -16,6 +16,7 @@ from .chat_utils import (
     _add_watcher, _notify_watchers, is_blocked,
 )
 from .push import send_push_to_phone
+from .utils import utc_now_iso
 
 typing_status = {}
 
@@ -68,7 +69,7 @@ def on_join(data):
         online_users[user].add(request.sid)
 
         # Update last_online in DB
-        now_iso = datetime.now().isoformat()
+        now_iso = utc_now_iso()
         conn = get_db_connection()
         try:
             c = conn.cursor()
@@ -125,7 +126,7 @@ def on_disconnect(reason=None):
                     del online_users[phone]
                     user_visibility.pop(phone, None)
                     # Stamp last_online in DB
-                    now_iso = datetime.now().isoformat()
+                    now_iso = utc_now_iso()
                     conn = get_db_connection()
                     try:
                         c = conn.cursor()
@@ -179,7 +180,7 @@ def handle_message(data):
             c.execute("INSERT INTO messages(sender,receiver,message,encrypted_message,message_type,status,timestamp) VALUES(?,?,?,?,?,?,?)",
                       (sender, receiver, message, encrypted_message, "text", "sent", now_iso))
             message_id = c.lastrowid
-            c.execute("INSERT OR IGNORE INTO users(phone,last_online) VALUES(?,?)", (receiver, now_iso))
+            c.execute("INSERT OR IGNORE INTO users(phone,last_online) VALUES(?,?)", (receiver, utc_now_iso()))
             c.execute("INSERT OR IGNORE INTO contacts(user_phone,contact_phone,contact_name,last_message,last_sender) VALUES(?,?,?,?,?)",
                       (sender, receiver, "", message, sender))
             c.execute("UPDATE contacts SET last_message=?, last_sender=?, timestamp=CURRENT_TIMESTAMP WHERE user_phone=? AND contact_phone=?",
@@ -680,7 +681,7 @@ def handle_set_presence(data):
 
         if not contact:
             return  # visibility-only ping with no specific chat to update
-        now_iso = datetime.now().isoformat()
+        now_iso = utc_now_iso()
         if status == 'away':
             # User backed out / minimized the app for this chat. Persist the
             # last_online stamp so a fresh page load / API fetch also sees it,
@@ -708,7 +709,7 @@ def handle_heartbeat(data):
     try:
         phone = str(data.get('phone', ''))
         if phone:
-            now_iso = datetime.now().isoformat()
+            now_iso = utc_now_iso()
             conn = get_db_connection()
             try:
                 c = conn.cursor()

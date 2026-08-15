@@ -1303,6 +1303,21 @@
             justify-content: center;
         }
 
+        .download-viewer {
+            position: absolute;
+            top: -40px;
+            right: 42px;
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         @media (max-width: 768px) {
             .message-group {
                 max-width: 90%;
@@ -1789,6 +1804,7 @@
     <!-- Media Viewer -->
     <div id="mediaViewer" class="media-viewer">
         <div class="media-viewer-content">
+            <button class="download-viewer" onclick="downloadCurrentMedia()" title="Download"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
             <button class="close-viewer" onclick="closeMediaViewer()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             <img id="viewerImage" src="" alt="">
             <video id="viewerVideo" controls style="display: none;"></video>
@@ -3204,15 +3220,40 @@
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
 
-        function downloadFile(filePath, fileName) {
-            const link = document.createElement('a');
-            link.href = `/uploads/${filePath}`;
-            link.download = fileName;
-            link.click();
+        // Robust download: fetches the file as a blob and saves it locally
+        // using the ORIGINAL filename, instead of relying on the anchor
+        // "download" attribute alone (which some browsers/hosts will
+        // override with whatever name the server URL happens to use — in
+        // our case a random UUID, not the real file/photo/video name).
+        async function downloadFile(filePath, fileName) {
+            const url = `/uploads/${filePath}`;
+            try {
+                const res = await fetch(url);
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = fileName || filePath;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 4000);
+            } catch (err) {
+                // Fallback: still try a plain download-attribute click
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName || filePath;
+                link.click();
+            }
         }
 
-        function viewMedia(filePath, mediaType) {
+        let currentMediaPath = null;
+        let currentMediaName = null;
+
+        function viewMedia(filePath, mediaType, fileName = null) {
             const mediaUrl = `/uploads/${filePath}`;
+            currentMediaPath = filePath;
+            currentMediaName = fileName;
             
             if (mediaType === 'image') {
                 viewerImage.src = mediaUrl;
@@ -3225,6 +3266,12 @@
             }
             
             mediaViewer.style.display = 'flex';
+        }
+
+        function downloadCurrentMedia() {
+            if (currentMediaPath) {
+                downloadFile(currentMediaPath, currentMediaName);
+            }
         }
 
         function closeMediaViewer() {
@@ -3255,7 +3302,7 @@
             if (messageType === 'image') {
                 const mediaPreview = document.createElement('div');
                 mediaPreview.className = 'media-preview';
-                mediaPreview.onclick = () => viewMedia(filePath, 'image');
+                mediaPreview.onclick = () => viewMedia(filePath, 'image', fileName);
 
                 const img = document.createElement('img');
                 img.src = `/uploads/${filePath}`;
@@ -3271,7 +3318,7 @@
                 
                 const mediaPreview = document.createElement('div');
                 mediaPreview.className = 'media-preview';
-                mediaPreview.onclick = () => viewMedia(filePath, 'video');
+                mediaPreview.onclick = () => viewMedia(filePath, 'video', fileName);
                 
                 const video = document.createElement('video');
                 video.src = `/uploads/${filePath}`;

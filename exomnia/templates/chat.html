@@ -1577,6 +1577,9 @@
         </div>
 
         <div class="header-actions">
+            <button class="header-menu-btn" id="whiteboardBtn" onclick="openWhiteboard()" title="Whiteboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/><path d="M7.5 11.5l2.5-2.5 2 2 3.5-3.5"/></svg>
+            </button>
             <button class="header-menu-btn" onclick="toggleHeaderMenu(event)" title="More options">
                 <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg>
             </button>
@@ -4624,6 +4627,220 @@
             };
         })();
     </script>
+<!-- ================= Interactive Whiteboard ================= -->
+<style>
+    .wb-overlay{position:fixed;inset:0;background:#eef4f4;z-index:9999;display:none;flex-direction:column;}
+    .wb-overlay.open{display:flex;}
+    .wb-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;background:#fff;box-shadow:0 2px 10px rgba(14,73,80,0.12);flex-wrap:wrap;position:relative;z-index:2;}
+    .wb-toolbar-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .wb-tool{width:38px;height:38px;border:none;border-radius:10px;background:#f2f6f6;font-size:17px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s;flex-shrink:0;}
+    .wb-tool.active{background:var(--accent-color,#2ec4b6);color:#fff;}
+    .wb-tool:hover{background:#e4edee;}
+    #wbColor{width:34px;height:34px;border:none;border-radius:8px;padding:0;cursor:pointer;background:none;flex-shrink:0;}
+    #wbWidth{width:80px;}
+    .wb-close{width:38px;height:38px;border:none;border-radius:50%;background:#fff1f1;color:#c0392b;font-size:15px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);flex-shrink:0;}
+    .wb-title{font-size:13px;font-weight:700;color:var(--primary-color,#0E4950);margin-right:4px;white-space:nowrap;}
+    .wb-canvas-wrap{flex:1;position:relative;overflow:hidden;background:#fff;touch-action:none;}
+    #wbCanvas{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;}
+</style>
+
+<div id="wbOverlay" class="wb-overlay">
+    <div class="wb-toolbar">
+        <div class="wb-toolbar-left">
+            <span class="wb-title">🖊️ Whiteboard</span>
+            <button class="wb-tool active" id="wbToolPen" title="Pen" onclick="wbSetTool('pen')">✏️</button>
+            <button class="wb-tool" id="wbToolEraser" title="Eraser" onclick="wbSetTool('eraser')">🧽</button>
+            <input type="color" id="wbColor" value="#1f2937" title="Colour">
+            <input type="range" id="wbWidth" min="1" max="20" value="3" title="Brush size">
+            <label class="wb-tool" title="Add image">
+                🖼️
+                <input type="file" id="wbImageInput" accept="image/*" style="display:none">
+            </label>
+            <button class="wb-tool" title="Clear board" onclick="wbClear()">🗑️</button>
+        </div>
+        <button class="wb-close" onclick="closeWhiteboard()" title="Close whiteboard">✕</button>
+    </div>
+    <div class="wb-canvas-wrap">
+        <canvas id="wbCanvas"></canvas>
+    </div>
+</div>
+
+<script>
+(function(){
+    const room = 'wb_room_' + [String(myPhone).toLowerCase(), String(contactPhone).toLowerCase()].sort().join('_');
+    const clientId = 'c_' + Math.random().toString(36).slice(2) + Date.now();
+    let ops = [];
+    let tool = 'pen';
+    let drawing = false;
+    let lastPt = null;
+    let joined = false;
+
+    const overlay = document.getElementById('wbOverlay');
+    const canvas  = document.getElementById('wbCanvas');
+    const ctx     = canvas.getContext('2d');
+    const colorEl = document.getElementById('wbColor');
+    const widthEl = document.getElementById('wbWidth');
+
+    function resizeCanvas(){
+        const wrap = canvas.parentElement;
+        canvas.width  = wrap.clientWidth;
+        canvas.height = wrap.clientHeight;
+        redrawAll();
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function toPixel(rx, ry){ return [rx * canvas.width, ry * canvas.height]; }
+
+    function drawStrokeOp(op){
+        const [x0,y0] = toPixel(op.x0, op.y0);
+        const [x1,y1] = toPixel(op.x1, op.y1);
+        ctx.strokeStyle = op.tool === 'eraser' ? '#ffffff' : op.color;
+        ctx.lineWidth = op.tool === 'eraser' ? (op.width * 3) : op.width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        ctx.moveTo(x0,y0);
+        ctx.lineTo(x1,y1);
+        ctx.stroke();
+    }
+
+    function drawImageOp(op){
+        const img = new Image();
+        img.onload = () => {
+            const [x,y] = toPixel(op.x, op.y);
+            ctx.drawImage(img, x, y, op.w * canvas.width, op.h * canvas.height);
+        };
+        img.src = op.image;
+    }
+
+    function applyOp(op){
+        if (op.type === 'stroke') drawStrokeOp(op);
+        else if (op.type === 'image') drawImageOp(op);
+    }
+
+    function redrawAll(){
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ops.forEach(applyOp);
+    }
+
+    function getRelPoint(evt){
+        const rect = canvas.getBoundingClientRect();
+        const cx = (evt.touches ? evt.touches[0].clientX : evt.clientX) - rect.left;
+        const cy = (evt.touches ? evt.touches[0].clientY : evt.clientY) - rect.top;
+        return [cx / canvas.width, cy / canvas.height];
+    }
+
+    function pointerDown(evt){
+        evt.preventDefault();
+        drawing = true;
+        lastPt = getRelPoint(evt);
+    }
+    function pointerMove(evt){
+        if (!drawing) return;
+        evt.preventDefault();
+        const pt = getRelPoint(evt);
+        const op = {
+            type: 'stroke',
+            x0: lastPt[0], y0: lastPt[1], x1: pt[0], y1: pt[1],
+            color: colorEl.value, width: Number(widthEl.value), tool, clientId
+        };
+        ops.push(op);
+        drawStrokeOp(op);
+        socket.emit('whiteboard_draw', Object.assign({room}, op));
+        lastPt = pt;
+    }
+    function pointerUp(){ drawing = false; lastPt = null; }
+
+    canvas.addEventListener('mousedown', pointerDown);
+    canvas.addEventListener('mousemove', pointerMove);
+    window.addEventListener('mouseup', pointerUp);
+    canvas.addEventListener('touchstart', pointerDown, {passive:false});
+    canvas.addEventListener('touchmove', pointerMove, {passive:false});
+    canvas.addEventListener('touchend', pointerUp);
+
+    window.wbSetTool = function(t){
+        tool = t;
+        document.getElementById('wbToolPen').classList.toggle('active', t === 'pen');
+        document.getElementById('wbToolEraser').classList.toggle('active', t === 'eraser');
+    };
+
+    window.wbClear = function(){
+        if (!confirm('Clear the whiteboard for everyone?')) return;
+        ops = [];
+        redrawAll();
+        socket.emit('whiteboard_clear', {room, clientId});
+    };
+
+    document.getElementById('wbImageInput').addEventListener('change', function(e){
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev){
+            const img = new Image();
+            img.onload = function(){
+                const maxDim = 900;
+                let w = img.width, h = img.height;
+                if (w > maxDim || h > maxDim){
+                    const scale = maxDim / Math.max(w, h);
+                    w = Math.round(w * scale); h = Math.round(h * scale);
+                }
+                const off = document.createElement('canvas');
+                off.width = w; off.height = h;
+                off.getContext('2d').drawImage(img, 0, 0, w, h);
+                const dataUrl = off.toDataURL('image/jpeg', 0.82);
+
+                const relW = Math.min(0.5, w / canvas.width);
+                const relH = relW * (h / w);
+                const op = {
+                    type: 'image', id: clientId + '_' + Date.now(), image: dataUrl,
+                    x: 0.5 - relW / 2, y: 0.5 - relH / 2, w: relW, h: relH, clientId
+                };
+                ops.push(op);
+                drawImageOp(op);
+                socket.emit('whiteboard_image', Object.assign({room}, op));
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+    });
+
+    socket.on('whiteboard_state', function(data){
+        if (data.room !== room) return;
+        ops = data.ops || [];
+        redrawAll();
+    });
+    socket.on('whiteboard_draw', function(op){
+        if (op.room !== room || op.clientId === clientId) return;
+        ops.push(op);
+        drawStrokeOp(op);
+    });
+    socket.on('whiteboard_image', function(op){
+        if (op.room !== room || op.clientId === clientId) return;
+        ops.push(op);
+        drawImageOp(op);
+    });
+    socket.on('whiteboard_clear', function(data){
+        if (data.room !== room || data.clientId === clientId) return;
+        ops = [];
+        redrawAll();
+    });
+
+    window.openWhiteboard = function(){
+        overlay.classList.add('open');
+        if (!joined){
+            socket.emit('whiteboard_join', {room});
+            joined = true;
+        }
+        setTimeout(resizeCanvas, 30);
+    };
+    window.closeWhiteboard = function(){
+        overlay.classList.remove('open');
+    };
+})();
+</script>
+
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

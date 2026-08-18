@@ -7,9 +7,6 @@
 <link rel="manifest" href="/static/manifest.json">
 <meta name="theme-color" content="#0E4950">
 <link rel="icon" href="/static/icons/icon-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap">
 <style>
     :root {
         --primary: #0E4950;
@@ -88,9 +85,23 @@
         background:#ffffff; border-radius:22px; padding:8px 10px;
         display:flex; align-items:center; gap:6px;
         box-shadow:0 6px 24px rgba(14,73,80,0.22), 0 1px 3px rgba(0,0,0,0.08);
-        z-index:25; max-width:94vw; overflow-x:auto; touch-action:auto;
+        z-index:25; width:max-content; max-width:96vw; overflow-x:auto; touch-action:auto;
     }
     #wb-toolbar::-webkit-scrollbar { display:none; }
+
+    /* Narrow phones: everything at once doesn't fit in one scrollable
+       row without it looking like buttons are missing/cut off, so wrap
+       onto two centred rows instead and shrink things a touch. */
+    @media (max-width:480px) {
+        #wb-toolbar {
+            flex-wrap:wrap; justify-content:center; overflow-x:visible;
+            width:calc(100% - 20px); max-width:340px; row-gap:8px; padding:8px 8px;
+            bottom:calc(10px + env(safe-area-inset-bottom,0px));
+        }
+        .wb-swatch { width:24px; height:24px; }
+        .wb-tool-btn { width:32px; height:32px; }
+        .wb-sep { display:none; }
+    }
 
     .wb-swatch {
         width:26px; height:26px; border-radius:50%; border:2px solid transparent;

@@ -14,8 +14,9 @@ from . import chat
 from . import groups
 from . import voice
 from . import social
+from . import whiteboard
 
 __all__ = [
     "auth", "main", "files", "contacts", "profile",
-    "messages", "chat", "groups", "voice", "social",
+    "messages", "chat", "groups", "voice", "social", "whiteboard",
 ]

@@ -20,17 +20,6 @@ from .utils import utc_now_iso
 
 typing_status = {}
 
-# ----------------- Interactive whiteboard -----------------
-# In-memory per-room drawing history so a board can be replayed for anyone
-# who (re)opens it mid-session. Mirrors the style of the other in-memory
-# presence/typing stores above — not persisted to disk.
-whiteboard_state = {}
-WHITEBOARD_MAX_OPS = 4000
-
-
-def _wb_room_ops(room):
-    return whiteboard_state.setdefault(room, [])
-
 
 @socketio.on('register_user')
 def on_register_user(data):
@@ -154,6 +143,10 @@ def on_disconnect(reason=None):
         for key in list(typing_status.keys()):
             if typing_status.get(key):
                 del typing_status[key]
+
+        # Drop this sid from any whiteboard(s) it had open.
+        from .whiteboard_sockets import handle_disconnect as _wb_handle_disconnect
+        _wb_handle_disconnect(sid)
     except Exception as e:
         print(f"Error in disconnect: {e}")
 
@@ -816,89 +809,6 @@ def handle_heartbeat(data):
                 return_db_connection(conn)
     except Exception as e:
         print(f"Error in heartbeat: {e}")
-
-@socketio.on('whiteboard_join')
-def on_whiteboard_join(data):
-    """A user opened the interactive whiteboard for a chat/group. Put their
-    socket in the board's room and hand back the current board so it looks
-    the same for everyone already drawing on it."""
-    try:
-        room = str(data.get('room', '')).strip()
-        if not room:
-            return
-        join_room(room)
-        emit('whiteboard_state', {'room': room, 'ops': _wb_room_ops(room)}, room=request.sid)
-    except Exception as e:
-        print(f"Error in whiteboard_join: {e}")
-
-
-@socketio.on('whiteboard_draw')
-def on_whiteboard_draw(data):
-    """One short line segment of a freehand stroke. Sent continuously while
-    someone is drawing so peers see it appear in real time."""
-    try:
-        room = str(data.get('room', '')).strip()
-        if not room:
-            return
-        op = {
-            'type': 'stroke',
-            'strokeId': data.get('strokeId'),
-            'x0': data.get('x0'), 'y0': data.get('y0'),
-            'x1': data.get('x1'), 'y1': data.get('y1'),
-            'color': data.get('color', '#1f2937'),
-            'width': data.get('width', 3),
-            'tool': data.get('tool', 'pen'),
-            'clientId': data.get('clientId'),
-        }
-        ops = _wb_room_ops(room)
-        ops.append(op)
-        if len(ops) > WHITEBOARD_MAX_OPS:
-            del ops[:len(ops) - WHITEBOARD_MAX_OPS]
-        emit('whiteboard_draw', dict(op, room=room), room=room, broadcast=True)
-    except Exception as e:
-        print(f"Error in whiteboard_draw: {e}")
-
-
-@socketio.on('whiteboard_image')
-def on_whiteboard_image(data):
-    """Someone dropped an image onto the board mid-session."""
-    try:
-        room = str(data.get('room', '')).strip()
-        image = data.get('image', '') or ''
-        if not room or not image.startswith('data:image'):
-            return
-        if len(image) > 2_500_000:
-            emit('error', {'message': 'That image is too large for the whiteboard.'}, room=request.sid)
-            return
-        op = {
-            'type': 'image',
-            'id': data.get('id'),
-            'image': image,
-            'x': data.get('x', 0.3), 'y': data.get('y', 0.3),
-            'w': data.get('w', 0.3), 'h': data.get('h', 0.3),
-            'clientId': data.get('clientId'),
-        }
-        ops = _wb_room_ops(room)
-        ops.append(op)
-        if len(ops) > WHITEBOARD_MAX_OPS:
-            del ops[:len(ops) - WHITEBOARD_MAX_OPS]
-        emit('whiteboard_image', dict(op, room=room), room=room, broadcast=True)
-    except Exception as e:
-        print(f"Error in whiteboard_image: {e}")
-
-
-@socketio.on('whiteboard_clear')
-def on_whiteboard_clear(data):
-    """Wipe the shared board for everyone in the room."""
-    try:
-        room = str(data.get('room', '')).strip()
-        if not room:
-            return
-        whiteboard_state[room] = []
-        emit('whiteboard_clear', {'room': room, 'clientId': data.get('clientId')}, room=room, broadcast=True)
-    except Exception as e:
-        print(f"Error in whiteboard_clear: {e}")
-
 
 @socketio.on_error_default
 def default_error_handler(e):

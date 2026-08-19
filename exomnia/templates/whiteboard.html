@@ -130,10 +130,11 @@
     #wb-selbar button.danger:hover { background:#e74c3c; }
 
     /* ── Canvas ── */
-    #wb-canvas-wrap { flex:1; position:relative; min-height:0; background:#ffffff; overflow:auto; }
+    #wb-canvas-wrap { flex:1; position:relative; min-height:0; background:#ffffff; overflow:hidden; }
+    #wb-canvas-wrap.wb-zoomed { overflow:auto; }
     #wb-canvas-wrap.wb-pan-mode { touch-action:pan-x pan-y; cursor:grab; }
     #wb-canvas-wrap.wb-pan-mode:active { cursor:grabbing; }
-    #wb-stage { position:relative; transform-origin:0 0; }
+    #wb-stage { position:relative; transform-origin:0 0; width:100%; height:100%; }
     #wb-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair; display:block; }
     #wb-preview-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
     #wb-cursor-layer { position:absolute; inset:0; pointer-events:none; }
@@ -483,6 +484,14 @@ function colorForPhone(p) {
 function resizeCanvas() {
     const dpr = window.devicePixelRatio || 1;
     const w = wrap.clientWidth, h = wrap.clientHeight;
+    if (w < 10 || h < 10) {
+        // Layout hasn't settled yet (common right after page load on
+        // mobile, where dynamic viewport height / safe-area insets can
+        // resolve a tick late). Don't commit to a collapsed canvas —
+        // just retry shortly instead of shrinking the board.
+        requestAnimationFrame(() => setTimeout(resizeCanvas, 60));
+        return;
+    }
     canvas.width = w * dpr; canvas.height = h * dpr;
     canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
     pcanvas.width = w * dpr; pcanvas.height = h * dpr;
@@ -493,6 +502,9 @@ function resizeCanvas() {
     redrawAll();
 }
 window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', resizeCanvas);
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 150));
 
 // ── Shape rendering (shared by main canvas + live preview) ─────
 function strokePath(c, shape) {
@@ -878,13 +890,18 @@ document.addEventListener('pointerdown', (e) => {
     if (!e.target.closest('.wb-tool-btn')) closeAllPopovers();
 }, true);
 
-// ── Zoom (CSS zoom on the stage; wrap becomes scrollable) ───────
+// ── Zoom (CSS zoom on the stage; wrap becomes scrollable only when zoomed) ─
 function wbZoom(delta) {
     zoomScale = Math.max(0.5, Math.min(3, Math.round((zoomScale + delta) * 100) / 100));
     stage.style.zoom = zoomScale;
+    wrap.classList.toggle('wb-zoomed', zoomScale !== 1);
     document.getElementById('wbZoomLabel').textContent = Math.round(zoomScale * 100) + '%';
 }
-function wbZoomReset() { zoomScale = 1; stage.style.zoom = 1; document.getElementById('wbZoomLabel').textContent = '100%'; }
+function wbZoomReset() {
+    zoomScale = 1; stage.style.zoom = 1;
+    wrap.classList.remove('wb-zoomed');
+    document.getElementById('wbZoomLabel').textContent = '100%';
+}
 
 // ── Pointer coordinate helper (accounts for zoom + scroll) ──────
 function getPos(e) {

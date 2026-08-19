@@ -166,29 +166,29 @@
     }
     #wb-toast.show { transform:translateX(-50%) translateY(0); }
 
-    /* ── Toolbar ── */
+    /* ── Toolbar (left sidebar, toggled by wb-tools-toggle) ── */
     #wb-toolbar {
-        position:absolute; left:50%; bottom:calc(16px + env(safe-area-inset-bottom,0px));
-        transform:translateX(-50%);
-        background:#ffffff; border-radius:22px; padding:8px 10px;
-        display:flex; align-items:center; gap:6px;
-        box-shadow:0 6px 24px rgba(14,73,80,0.22), 0 1px 3px rgba(0,0,0,0.08);
-        z-index:25; width:max-content; max-width:96vw; overflow-x:auto; touch-action:auto;
+        position:absolute; top:0; left:0; bottom:0;
+        padding:14px 10px calc(14px + env(safe-area-inset-bottom,0px));
+        background:#ffffff;
+        display:flex; flex-direction:column; align-items:center; gap:8px;
+        box-shadow:2px 0 24px rgba(14,73,80,0.22), 1px 0 3px rgba(0,0,0,0.08);
+        z-index:25; width:60px; overflow-y:auto; overflow-x:visible; touch-action:auto;
+        transform:translateX(-100%); transition:transform 0.22s ease;
     }
+    #wb-toolbar.show { transform:translateX(0); }
     #wb-toolbar::-webkit-scrollbar { display:none; }
 
-    @media (max-width:480px) {
-        #wb-toolbar {
-            flex-wrap:wrap; justify-content:center; overflow-x:visible;
-            width:calc(100% - 20px); max-width:360px; row-gap:8px; padding:8px 8px;
-            bottom:calc(10px + env(safe-area-inset-bottom,0px));
-        }
-        .wb-swatch { width:24px; height:24px; }
-        .wb-tool-btn { width:32px; height:32px; }
-        .wb-sep { display:none; }
-    }
+    .wb-sep { width:26px; height:1px; background:var(--border); flex-shrink:0; margin:2px 0; }
 
-    .wb-sep { width:1px; height:24px; background:var(--border); flex-shrink:0; margin:0 2px; }
+    /* ── Icon in header that shows/hides the toolbar sidebar ── */
+    .wb-tools-toggle {
+        background:rgba(255,255,255,0.15); border:none; color:#fff;
+        width:32px; height:32px; border-radius:10px; cursor:pointer; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .wb-tools-toggle:hover { background:rgba(255,255,255,0.25); }
+    .wb-tools-toggle.active { background:#fff; color:var(--primary); }
 
     .wb-tool-btn {
         width:36px; height:36px; border-radius:50%; border:none; background:var(--bg);
@@ -209,12 +209,12 @@
 
     /* ── Popovers (color / size / shapes / more) ── */
     .wb-popover {
-        position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%) scale(0.92);
+        position:absolute; left:calc(100% + 10px); top:50%; transform:translateY(-50%) scale(0.92);
         background:#fff; border-radius:16px; padding:12px; box-shadow:0 10px 30px rgba(14,73,80,0.28);
         display:none; z-index:40; touch-action:auto; opacity:0; transition:opacity 0.12s, transform 0.12s;
         width:max-content; max-width:78vw;
     }
-    .wb-popover.show { display:block; opacity:1; transform:translateX(-50%) scale(1); }
+    .wb-popover.show { display:block; opacity:1; transform:translateY(-50%) scale(1); }
     .wb-swatch-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
     .wb-swatch {
         width:26px; height:26px; border-radius:50%; border:2px solid transparent;
@@ -280,6 +280,9 @@
 <div id="wb-header">
     <button class="wb-back" onclick="wbGoBack()">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="wb-tools-toggle" id="wbToolsToggle" onclick="wbToggleToolbar()" title="Tools">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
     </button>
     <div id="wb-title-wrap">
         <div id="wb-title">{{ board_title }} — Whiteboard</div>
@@ -463,6 +466,13 @@ const myName    = {{ (my_name if my_name is defined else phone)|tojson }};
 
 function wbGoBack() {
     if (document.referrer) { window.history.back(); } else { window.location.href = backUrl; }
+}
+
+// ── Tools sidebar toggle (tap icon: show, tap again: hide) ─────
+function wbToggleToolbar() {
+    document.getElementById('wb-toolbar').classList.toggle('show');
+    document.getElementById('wbToolsToggle').classList.toggle('active');
+    closeAllPopovers();
 }
 
 // ── Canvas setup ──────────────────────────────────────────────

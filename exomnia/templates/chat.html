@@ -2058,7 +2058,18 @@
         }
 
         function openWhiteboard() {
-            window.location.href = '/whiteboard/dm/' + encodeURIComponent(contactPhone) + '?phone=' + encodeURIComponent(myPhone);
+            const url = '/whiteboard/dm/' + encodeURIComponent(contactPhone) + '?phone=' + encodeURIComponent(myPhone);
+            // On desktop this chat page can be loaded inside the two-pane
+            // iframe (#desktopChatFrame). Navigating window.location in that
+            // case only swaps content inside the narrow iframe, so the
+            // whiteboard ends up squeezed next to the contacts list instead
+            // of using the full browser tab. Break out to the top window so
+            // the board always gets the whole screen.
+            if (window.top && window.top !== window.self) {
+                window.top.location.href = url;
+            } else {
+                window.location.href = url;
+            }
         }
 
         function autoResizeTextarea() {

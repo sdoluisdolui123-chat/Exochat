@@ -73,3 +73,33 @@ def dm_whiteboard_page(contact_phone):
     except Exception as e:
         print(f"Error in dm_whiteboard_page: {e}")
         return "An error occurred", 500
+
+
+@app.route("/whiteboard/room/<path:room_id>")
+def room_whiteboard_page(room_id):
+    """
+    Generic entry point used by whiteboard invite links (the '+' button
+    on the board). Unlike group_whiteboard_page/dm_whiteboard_page this
+    doesn't check group membership or contact status — it just drops
+    whoever holds the link straight into that exact live room, so an
+    invited contact who wasn't part of the original chat can still join
+    the same canvas in real time. room_id is restricted to whiteboard
+    room ids only (wb_dm_*/wb_group_*) so this can't be used to peek
+    into unrelated socket rooms.
+    """
+    phone = request.args.get("phone")
+    if not phone:
+        return redirect(url_for('signin'))
+    if not (room_id.startswith("wb_dm_") or room_id.startswith("wb_group_")):
+        return "Invalid whiteboard link", 400
+
+    title = request.args.get("title") or "Whiteboard"
+    my_name = _resolve_display_name(phone, phone) or phone
+    return render_template(
+        "whiteboard.html",
+        phone=phone,
+        room=room_id,
+        board_title=title,
+        my_name=my_name,
+        back_url=url_for('main_app', logged_in_phone=phone),
+    )

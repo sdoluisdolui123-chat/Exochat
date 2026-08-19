@@ -739,7 +739,15 @@
     function goBack() { window.history.back(); }
 
     function openWhiteboard() {
-        window.location.href = '/whiteboard/group/' + groupId + '?phone=' + encodeURIComponent(myPhone);
+        const url = '/whiteboard/group/' + groupId + '?phone=' + encodeURIComponent(myPhone);
+        // Same fix as the 1:1 chat: break out of the desktop two-pane
+        // iframe so the whiteboard opens full-screen in the real tab
+        // instead of being squeezed into the side pane.
+        if (window.top && window.top !== window.self) {
+            window.top.location.href = url;
+        } else {
+            window.location.href = url;
+        }
     }
 
     function showGrpToast(msg, dur=3000) {

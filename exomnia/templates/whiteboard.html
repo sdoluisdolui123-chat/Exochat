@@ -162,6 +162,7 @@
         color:var(--primary); display:flex; align-items:center; justify-content:center;
         cursor:pointer; flex-shrink:0; transition:background 0.15s, color 0.15s, transform 0.1s; position:relative;
     }
+    .wb-tool-wrap { position:relative; display:flex; flex-shrink:0; }
     .wb-tool-btn.active { background:var(--primary); color:#fff; }
     .wb-tool-btn:hover { background:var(--border); }
     .wb-tool-btn.active:hover { background:var(--primary-light); }
@@ -301,15 +302,19 @@
 
         <div class="wb-sep"></div>
 
-        <button class="wb-tool-btn" id="toolBtn-color" onclick="wbTogglePopover('color')" title="Color">
-            <span class="wb-color-btn" id="wbColorPreview" style="background:#1a2e2f"></span>
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-color" onclick="wbTogglePopover('color')" title="Color">
+                <span class="wb-color-btn" id="wbColorPreview" style="background:#1a2e2f"></span>
+            </button>
             <div class="wb-popover" id="pop-color">
                 <div class="wb-popover-label">Color</div>
                 <div class="wb-swatch-grid" id="wbSwatchGrid"></div>
             </div>
-        </button>
-        <button class="wb-tool-btn" id="toolBtn-size" onclick="wbTogglePopover('size')" title="Brush size">
-            <span class="wb-size-dot" id="wbSizeDot" style="width:8px;height:8px;"></span>
+        </div>
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-size" onclick="wbTogglePopover('size')" title="Brush size">
+                <span class="wb-size-dot" id="wbSizeDot" style="width:8px;height:8px;"></span>
+            </button>
             <div class="wb-popover" id="pop-size">
                 <div class="wb-popover-label">Size</div>
                 <div class="wb-size-row">
@@ -317,7 +322,7 @@
                     <input type="range" id="wbSizeSlider" min="2" max="40" value="4" oninput="wbSetSize(this.value)">
                 </div>
             </div>
-        </button>
+        </div>
 
         <div class="wb-sep"></div>
 
@@ -330,8 +335,10 @@
 
         <div class="wb-sep"></div>
 
-        <button class="wb-tool-btn" id="toolBtn-more" onclick="wbTogglePopover('more')" title="More tools">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-more" onclick="wbTogglePopover('more')" title="More tools">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
             <div class="wb-popover" id="pop-more">
                 <div class="wb-more-col">
                     <div class="wb-popover-label">More tools</div>
@@ -383,7 +390,7 @@
                     </div>
                 </div>
             </div>
-        </button>
+        </div>
 
         <input type="file" id="wb-file-input" accept="image/*" onchange="wbAddImage(event)">
     </div>
@@ -830,7 +837,7 @@ function wbTogglePopover(name) {
 }
 function closeAllPopovers() { document.querySelectorAll('.wb-popover').forEach(p => p.classList.remove('show')); }
 document.addEventListener('pointerdown', (e) => {
-    if (!e.target.closest('.wb-tool-btn')) closeAllPopovers();
+    if (!e.target.closest('.wb-tool-btn') && !e.target.closest('.wb-popover')) closeAllPopovers();
 }, true);
 
 // ── Zoom (CSS zoom on the stage; wrap becomes scrollable) ───────

@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Whiteboard · {{ board_title }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<link rel="manifest" href="/static/manifest.json">
+<meta name="theme-color" content="#0E4950">
+<link rel="icon" href="/static/icons/icon-192.png">
+<style>
+    :root {
+        --primary: #0E4950;
+        --primary-light: #1a6b75;
+        --accent: #2ec4b6;
+        --bg: #eef6f6;
+        --border: #d8e8e8;
+        --text: #1a2e2f;
+        --text-sec: #4a6567;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:none; }
+    html,body { height:100%; height:-webkit-fill-available; overflow:hidden; }
+    body {
+        font-family:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+        display:flex; flex-direction:column;
+        position:fixed; width:100%; top:0; left:0;
+        height:100vh; height:100dvh; background:#f4f8f8; color:var(--text);
+    }
+
+    /* ── Header ── */
+    #wb-header {
+        background:linear-gradient(135deg,var(--primary) 0%,var(--primary-light) 100%);
+        color:#fff; padding:calc(12px + env(safe-area-inset-top,0px)) 14px 12px;
+        display:flex; align-items:center; gap:10px;
+        box-shadow:0 2px 16px rgba(14,73,80,0.25);
+        z-index:20; position:relative; flex-shrink:0; touch-action:auto;
+    }
+    .wb-back {
+        background:rgba(255,255,255,0.15); border:none; color:#fff;
+        padding:7px 10px; border-radius:10px; cursor:pointer; font-size:18px;
+        display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .wb-back:hover { background:rgba(255,255,255,0.25); }
+    #wb-title-wrap { flex:1; min-width:0; }
+    #wb-title { font-size:16px; font-weight:700; letter-spacing:-0.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #wb-sub { font-size:11.5px; opacity:0.85; display:flex; align-items:center; gap:5px; margin-top:1px; }
+    #wb-sub .dot { width:6px; height:6px; border-radius:50%; background:#ffb020; }
+    #wb-sub .dot.live { background:#3ddc84; }
+
+    #wb-avatars { display:flex; align-items:center; flex-shrink:0; }
+    .wb-avatar {
+        width:26px; height:26px; border-radius:50%; border:2px solid var(--primary);
+        background:var(--accent); color:#fff; font-size:11px; font-weight:700;
+        display:flex; align-items:center; justify-content:center; margin-left:-8px;
+    }
+    #wb-avatars .wb-avatar:first-child { margin-left:0; }
+    .wb-help-btn {
+        background:rgba(255,255,255,0.15); border:none; color:#fff; margin-left:6px;
+        width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700;
+    }
+    .wb-help-btn:hover { background:rgba(255,255,255,0.25); }
+    .wb-invite-btn {
+        background:rgba(255,255,255,0.15); border:1.5px dashed rgba(255,255,255,0.6); color:#fff; margin-left:6px;
+        width:28px; height:28px; border-radius:50%; cursor:pointer; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .wb-invite-btn:hover { background:rgba(255,255,255,0.25); }
+    .wb-contact-empty { font-size:11.5px; color:var(--text-sec); padding:4px 2px; }
+
+    /* ── Selection bar (appears when something is selected) ── */
+    #wb-selbar {
+        position:fixed; top:calc(66px + env(safe-area-inset-top,0px)); left:50%;
+        transform:translateX(-50%) translateY(-12px); opacity:0; pointer-events:none;
+        background:#1a2e2f; color:#fff; border-radius:14px; padding:6px 8px 6px 14px;
+        display:flex; align-items:center; gap:8px; z-index:26; box-shadow:0 6px 20px rgba(0,0,0,0.25);
+        transition:transform 0.2s ease, opacity 0.2s ease; touch-action:auto;
+    }
+    #wb-selbar.show { transform:translateX(-50%) translateY(0); opacity:1; pointer-events:auto; }
+    #wb-selbar span { font-size:12.5px; font-weight:600; white-space:nowrap; }
+    #wb-selbar button {
+        border:none; background:rgba(255,255,255,0.12); color:#fff; border-radius:9px;
+        width:30px; height:30px; display:flex; align-items:center; justify-content:center; cursor:pointer;
+    }
+    #wb-selbar button:hover { background:rgba(255,255,255,0.25); }
+    #wb-selbar button.danger:hover { background:#e74c3c; }
+
+    /* ── Canvas ── */
+    #wb-canvas-wrap {
+        flex:1; position:relative; min-height:0; overflow:auto;
+        background-color:#ffffff;
+        background-image:radial-gradient(circle, #d8e8e8 1.4px, transparent 1.4px);
+        background-size:22px 22px;
+    }
+    #wb-canvas-wrap.wb-pan-mode { touch-action:pan-x pan-y; cursor:grab; }
+    #wb-canvas-wrap.wb-pan-mode:active { cursor:grabbing; }
+    #wb-stage { position:relative; transform-origin:0 0; }
+    #wb-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:none; cursor:crosshair; display:block; }
+    #wb-preview-canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
+    #wb-cursor-layer { position:absolute; inset:0; pointer-events:none; }
+    .wb-remote-cursor {
+        position:absolute; display:flex; align-items:center; gap:5px;
+        transform:translate(-2px,-2px); transition:left 0.06s linear, top 0.06s linear;
+        pointer-events:none;
+    }
+    .wb-remote-dot { width:12px; height:12px; border-radius:50% 50% 50% 0; transform:rotate(-45deg); box-shadow:0 1px 4px rgba(0,0,0,0.3); }
+    .wb-remote-label {
+        font-size:10.5px; font-weight:600; color:#fff; padding:2px 6px; border-radius:6px;
+        white-space:nowrap; box-shadow:0 1px 4px rgba(0,0,0,0.25);
+    }
+
+    /* ── Inline text/sticky editor ── */
+    .wb-editor {
+        position:absolute; z-index:15; font-family:'DM Sans',sans-serif; resize:none;
+        border:2px dashed var(--accent); background:rgba(255,255,255,0.9); outline:none;
+        border-radius:6px; padding:4px 6px; line-height:1.25; touch-action:auto;
+    }
+    .wb-editor.wb-sticky-editor { background:transparent; border:2px dashed rgba(0,0,0,0.35); border-radius:10px; }
+
+    /* ── Toast ── */
+    #wb-toast {
+        position:fixed; top:calc(66px + env(safe-area-inset-top,0px)); left:50%;
+        transform:translateX(-50%) translateY(-12px); opacity:0; pointer-events:none;
+        background:rgba(26,46,47,0.92); color:#fff; font-size:12.5px; font-weight:500;
+        padding:8px 14px; border-radius:20px; z-index:30;
+        transition:transform 0.25s ease, opacity 0.25s ease; max-width:88vw; text-align:center;
+    }
+    #wb-toast.show { transform:translateX(-50%) translateY(0); opacity:1; }
+
+    /* ── Toolbar ── */
+    #wb-toolbar {
+        position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom,0px));
+        transform:translateX(-50%);
+        background:#ffffff; border-radius:22px; padding:8px 10px;
+        display:flex; align-items:center; gap:6px;
+        box-shadow:0 6px 24px rgba(14,73,80,0.22), 0 1px 3px rgba(0,0,0,0.08);
+        z-index:25; width:max-content; max-width:96vw; overflow-x:auto; touch-action:auto;
+    }
+    #wb-toolbar::-webkit-scrollbar { display:none; }
+
+    @media (max-width:480px) {
+        #wb-toolbar {
+            flex-wrap:wrap; justify-content:center; overflow-x:visible;
+            width:calc(100% - 20px); max-width:360px; row-gap:8px; padding:8px 8px;
+            bottom:calc(10px + env(safe-area-inset-bottom,0px));
+        }
+        .wb-swatch { width:26px; height:26px; }
+        .wb-tool-btn { width:34px; height:34px; }
+        .wb-sep { display:none; }
+        /* Keep "More" on the first row so its popover opens above the whole
+           toolbar instead of overlapping a second wrapped row. */
+        #toolBtn-more { order:-1; }
+    }
+
+    .wb-sep { width:1px; height:24px; background:var(--border); flex-shrink:0; margin:0 2px; }
+
+    /* ── "More tools" popover attention hint ── */
+    #toolBtn-more.wb-attn::after {
+        content:''; position:absolute; top:-2px; right:-2px; width:9px; height:9px;
+        border-radius:50%; background:#ff5b5b; border:2px solid #fff;
+        animation:wbPulse 1.6s ease-in-out infinite;
+    }
+    @keyframes wbPulse {
+        0%,100% { transform:scale(1); opacity:1; }
+        50% { transform:scale(1.3); opacity:0.6; }
+    }
+
+    .wb-tool-btn {
+        width:38px; height:38px; border-radius:50%; border:none; background:var(--bg);
+        color:var(--primary); display:flex; align-items:center; justify-content:center;
+        cursor:pointer; flex-shrink:0; transition:background 0.15s, color 0.15s, transform 0.1s; position:relative;
+    }
+    .wb-tool-wrap { position:relative; display:flex; flex-shrink:0; }
+    .wb-tool-btn.active { background:var(--primary); color:#fff; }
+    .wb-tool-btn:hover { background:var(--border); }
+    .wb-tool-btn.active:hover { background:var(--primary-light); }
+    .wb-tool-btn.danger:hover { background:#fde2e2; color:#c0392b; }
+    .wb-tool-btn:disabled { opacity:0.35; cursor:default; }
+    .wb-tool-btn:disabled:hover { background:var(--bg); }
+    .wb-tool-btn:active:not(:disabled) { transform:scale(0.88); }
+
+    .wb-color-btn {
+        width:32px; height:32px; border-radius:50%; border:2px solid var(--border); flex-shrink:0;
+        cursor:pointer; padding:0; box-shadow:inset 0 0 0 2px #fff; transition:transform 0.1s;
+    }
+    .wb-color-btn:active { transform:scale(0.88); }
+
+    /* ── Popovers (color / size / shapes / more) ── */
+    .wb-popover {
+        position:absolute; bottom:calc(100% + 10px); left:50%; transform:translateX(-50%) translateY(6px) scale(0.94);
+        background:#fff; border-radius:16px; padding:12px; box-shadow:0 10px 30px rgba(14,73,80,0.28);
+        display:none; z-index:40; touch-action:auto; opacity:0; transition:opacity 0.15s ease, transform 0.15s ease;
+        width:max-content; max-width:78vw;
+    }
+    .wb-popover.show { display:block; opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+    .wb-swatch-grid { display:grid; grid-template-columns:repeat(6,1fr); gap:8px; }
+    .wb-swatch {
+        width:26px; height:26px; border-radius:50%; border:2px solid transparent;
+        cursor:pointer; flex-shrink:0; padding:0;
+    }
+    .wb-swatch.active { border-color:var(--primary); box-shadow:0 0 0 2px #fff inset; }
+    .wb-swatch.custom {
+        background:conic-gradient(red,yellow,lime,cyan,blue,magenta,red);
+        display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative;
+    }
+    .wb-swatch.custom input[type=color] { position:absolute; inset:0; opacity:0; cursor:pointer; border:none; }
+
+    .wb-popover-label { font-size:11px; font-weight:700; color:var(--text-sec); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px; }
+    .wb-size-row { display:flex; align-items:center; gap:10px; min-width:180px; }
+    .wb-size-row input[type=range] { flex:1; accent-color:var(--primary); }
+    #wbSizePreviewWrap { width:34px; height:34px; border-radius:50%; background:var(--bg); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .wb-size-dot { border-radius:50%; background:currentColor; color:var(--text); }
+
+    .wb-shape-grid { display:flex; gap:8px; }
+    .wb-more-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+    .wb-more-grid .wb-tool-btn { width:100%; }
+    .wb-more-col { display:flex; flex-direction:column; gap:8px; min-width:170px; }
+    .wb-zoom-row { display:flex; align-items:center; gap:6px; justify-content:center; }
+    #wbZoomLabel { font-size:12.5px; font-weight:700; width:44px; text-align:center; }
+    .wb-more-item {
+        display:flex; align-items:center; gap:10px; padding:9px 10px; border-radius:10px; border:none;
+        background:var(--bg); color:var(--text); font-size:13.5px; font-weight:600; cursor:pointer; width:100%;
+        text-align:left;
+    }
+    .wb-more-item:hover { background:var(--border); }
+    .wb-more-item.danger { color:#c0392b; }
+    .wb-more-item.danger:hover { background:#fde2e2; }
+
+    #wb-file-input { display:none; }
+
+    /* ── Confirm clear modal ── */
+    #wb-confirm-overlay {
+        position:fixed; inset:0; background:rgba(10,20,20,0.45); z-index:50;
+        display:none; align-items:center; justify-content:center; padding:20px; touch-action:auto;
+    }
+    #wb-confirm-overlay.show { display:flex; }
+    #wb-confirm-card { background:#fff; border-radius:16px; padding:22px; max-width:320px; text-align:center; }
+    #wb-confirm-card h3 { font-size:16px; margin-bottom:6px; }
+    #wb-confirm-card p { font-size:13.5px; color:var(--text-sec); margin-bottom:18px; }
+    .wb-confirm-actions { display:flex; gap:10px; }
+    .wb-confirm-actions button {
+        flex:1; padding:11px; border-radius:10px; border:none; font-size:14px; font-weight:600; cursor:pointer;
+    }
+    #wb-cancel-clear { background:var(--bg); color:var(--text); }
+    #wb-do-clear { background:#e74c3c; color:#fff; }
+
+    /* ── Invite people bottom sheet ── */
+    #wb-invite-overlay {
+        position:fixed; inset:0; background:rgba(10,20,20,0.45); z-index:50;
+        display:none; align-items:flex-end; justify-content:center; touch-action:auto;
+        opacity:0; transition:opacity 0.2s ease;
+    }
+    #wb-invite-overlay.show { display:flex; opacity:1; }
+    #wb-invite-sheet {
+        background:#fff; width:100%; max-width:480px; border-radius:22px 22px 0 0;
+        padding:8px 20px calc(20px + env(safe-area-inset-bottom,0px)) 20px;
+        box-shadow:0 -8px 30px rgba(14,73,80,0.25);
+        transform:translateY(100%); transition:transform 0.28s cubic-bezier(.32,.72,0,1);
+        max-height:82vh; overflow-y:auto; touch-action:auto;
+    }
+    #wb-invite-overlay.show #wb-invite-sheet { transform:translateY(0); }
+    .wb-sheet-handle { width:36px; height:4px; border-radius:2px; background:var(--border); margin:6px auto 12px; }
+    .wb-sheet-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .wb-sheet-header h3 { font-size:17px; font-weight:700; color:var(--text); }
+    .wb-sheet-close {
+        width:30px; height:30px; border-radius:50%; border:none; background:var(--bg); color:var(--text-sec);
+        display:flex; align-items:center; justify-content:center; cursor:pointer; flex-shrink:0;
+    }
+    .wb-sheet-close:hover { background:var(--border); }
+    .wb-sheet-body { display:flex; flex-direction:column; gap:6px; }
+    .wb-sheet-section-label {
+        font-size:11px; font-weight:700; color:var(--text-sec); text-transform:uppercase;
+        letter-spacing:0.04em; margin:8px 0 2px;
+    }
+    .wb-sheet-body > .wb-sheet-section-label:first-child { margin-top:0; }
+    .wb-invite-row { display:flex; gap:8px; margin-bottom:10px; }
+    .wb-invite-row input {
+        flex:1; min-width:0; border:1.5px solid var(--border); border-radius:11px; padding:12px 12px;
+        font-size:13px; color:var(--text); background:var(--bg);
+    }
+    .wb-invite-copy {
+        background:var(--primary); color:#fff; border:none; border-radius:11px; padding:0 18px;
+        font-size:13.5px; font-weight:700; cursor:pointer; flex-shrink:0;
+    }
+    .wb-invite-copy.copied { background:#2f9e5b; }
+    .wb-sheet-action {
+        display:flex; align-items:center; gap:12px; width:100%; border:none; background:var(--bg);
+        border-radius:14px; padding:12px 14px; cursor:pointer; text-align:left; margin-top:6px;
+    }
+    .wb-sheet-action:hover { background:var(--border); }
+    .wb-sheet-action-icon {
+        width:38px; height:38px; border-radius:50%; background:#fff; color:var(--primary);
+        display:flex; align-items:center; justify-content:center; flex-shrink:0;
+        box-shadow:0 1px 4px rgba(14,73,80,0.15);
+    }
+    .wb-sheet-action-text { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+    .wb-sheet-action-title { font-size:13.5px; font-weight:700; color:var(--text); }
+    .wb-sheet-action-sub { font-size:11.5px; color:var(--text-sec); }
+    .wb-sheet-action > svg:last-child { color:var(--text-sec); flex-shrink:0; }
+    #wbContactList { display:flex; flex-direction:column; gap:8px; margin:8px 0 2px; }
+    .wb-contact-row {
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+        background:var(--bg); border-radius:12px; padding:10px 14px;
+    }
+    .wb-contact-row .wb-contact-name { font-size:13.5px; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .wb-contact-row .wb-contact-tel { font-size:11.5px; color:var(--text-sec); }
+    .wb-contact-send {
+        background:var(--primary); color:#fff; border:none; border-radius:9px; padding:7px 12px;
+        font-size:12px; font-weight:700; cursor:pointer; flex-shrink:0;
+    }
+    .wb-contact-send.sent { background:#2f9e5b; }
+
+    /* ── First-run onboarding tip ── */
+    #wb-onboard {
+        position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom,0px));
+        transform:translateX(-50%); background:#1a2e2f; color:#fff; padding:10px 16px;
+        border-radius:14px; font-size:12.5px; max-width:280px; text-align:center; z-index:24;
+        box-shadow:0 8px 24px rgba(0,0,0,0.3); display:none; touch-action:auto;
+    }
+    #wb-onboard.show { display:block; }
+    #wb-onboard button { margin-top:8px; background:rgba(255,255,255,0.15); border:none; color:#fff; padding:5px 12px; border-radius:8px; font-size:11.5px; cursor:pointer; }
+</style>
+</head>
+<body>
+
+<div id="wb-header">
+    <button class="wb-back" onclick="wbGoBack()">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <div id="wb-title-wrap">
+        <div id="wb-title">{{ board_title }} — Whiteboard</div>
+        <div id="wb-sub"><span class="dot" id="wbStatusDot"></span><span id="wbStatusText">Connecting…</span></div>
+    </div>
+    <div id="wb-avatars"></div>
+    <button class="wb-invite-btn" onclick="wbOpenInvite()" title="Invite people">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </button>
+    <button class="wb-help-btn" onclick="wbShowOnboard(true)" title="Tips">?</button>
+</div>
+
+<div id="wb-canvas-wrap">
+    <div id="wb-stage">
+        <canvas id="wb-canvas"></canvas>
+        <canvas id="wb-preview-canvas"></canvas>
+        <div id="wb-cursor-layer"></div>
+    </div>
+    <div id="wb-toast"></div>
+    <div id="wb-onboard">
+        Tap-drag to draw. Use <b>Select</b> to move or delete anything. Tap <b>⋯</b> in the toolbar for text, sticky notes, shapes &amp; more.
+        <div><button onclick="wbShowOnboard(false)">Got it</button></div>
+    </div>
+
+    <div id="wb-selbar">
+        <span id="wbSelLabel">1 selected</span>
+        <button onclick="wbDuplicateSelected()" title="Duplicate">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        </button>
+        <button onclick="wbEditSelectedText()" id="wbSelEditBtn" title="Edit text" style="display:none">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+        </button>
+        <button class="danger" onclick="wbDeleteSelected()" title="Delete">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+        </button>
+        <button onclick="wbDeselect()" title="Deselect">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+    </div>
+
+    <div id="wb-toolbar">
+        <button class="wb-tool-btn" id="toolBtn-select" onclick="wbSetTool('select')" title="Select / move">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+        </button>
+        <button class="wb-tool-btn active" id="toolBtn-pen" onclick="wbSetTool('pen')" title="Pen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>
+        </button>
+        <button class="wb-tool-btn" id="toolBtn-eraser" onclick="wbSetTool('eraser')" title="Eraser">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20H8.5L3 14.5a1 1 0 0 1 0-1.4L13 3l8 8-7 7"/><path d="M17.5 15 8.5 6"/></svg>
+        </button>
+
+        <div class="wb-sep"></div>
+
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-color" onclick="wbTogglePopover('color')" title="Color">
+                <span class="wb-color-btn" id="wbColorPreview" style="background:#1a2e2f"></span>
+            </button>
+            <div class="wb-popover" id="pop-color">
+                <div class="wb-popover-label">Color</div>
+                <div class="wb-swatch-grid" id="wbSwatchGrid"></div>
+            </div>
+        </div>
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-size" onclick="wbTogglePopover('size')" title="Brush size">
+                <span class="wb-size-dot" id="wbSizeDot" style="width:8px;height:8px;"></span>
+            </button>
+            <div class="wb-popover" id="pop-size">
+                <div class="wb-popover-label">Size</div>
+                <div class="wb-size-row">
+                    <div id="wbSizePreviewWrap"><span class="wb-size-dot" id="wbSizeDotBig" style="width:8px;height:8px;"></span></div>
+                    <input type="range" id="wbSizeSlider" min="2" max="40" value="4" oninput="wbSetSize(this.value)">
+                </div>
+            </div>
+        </div>
+
+        <div class="wb-sep"></div>
+
+        <button class="wb-tool-btn" id="wbUndoBtn" onclick="wbUndo()" title="Undo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M3 13a9 9 0 1 0 3-7.7L3 7"/></svg>
+        </button>
+        <button class="wb-tool-btn" id="wbRedoBtn" onclick="wbRedo()" title="Redo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"/><path d="M21 13a9 9 0 1 1-3-7.7L21 7"/></svg>
+        </button>
+
+        <div class="wb-sep"></div>
+
+        <div class="wb-tool-wrap">
+            <button class="wb-tool-btn" id="toolBtn-more" onclick="wbTogglePopover('more')" title="More tools">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
+            </button>
+            <div class="wb-popover" id="pop-more">
+                <div class="wb-more-col">
+                    <div class="wb-popover-label">More tools</div>
+                    <div class="wb-more-grid">
+                        <button class="wb-tool-btn" id="toolBtn-pan" onclick="wbSetTool('pan')" title="Pan / scroll">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v6"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-4.53a1.5 1.5 0 0 1 2.12-2.12L6 15"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-text" onclick="wbSetTool('text')" title="Add text">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-sticky" onclick="wbSetTool('sticky')" title="Sticky note">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h13l3 3v13H4z"/><path d="M17 4v3h3"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-line" onclick="wbSetTool('line')" title="Line">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="5" y1="19" x2="19" y2="5"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-arrow" onclick="wbSetTool('arrow')" title="Arrow">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"/><polyline points="9 5 19 5 19 15"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-rect" onclick="wbSetTool('rect')" title="Rectangle">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="1"/></svg>
+                        </button>
+                        <button class="wb-tool-btn" id="toolBtn-ellipse" onclick="wbSetTool('ellipse')" title="Ellipse">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="12" rx="9" ry="6.5"/></svg>
+                        </button>
+                    </div>
+
+                    <div class="wb-popover-label" style="margin-top:4px;">Board</div>
+                    <button class="wb-more-item" onclick="document.getElementById('wb-file-input').click()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                        Add image
+                    </button>
+                    <button class="wb-more-item" onclick="wbSaveImage()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        Save as image
+                    </button>
+                    <button class="wb-more-item danger" onclick="wbConfirmClear()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                        Clear board
+                    </button>
+                    <div class="wb-popover-label" style="margin-top:4px;">Zoom</div>
+                    <div class="wb-zoom-row">
+                        <button class="wb-tool-btn" onclick="wbZoom(-0.25)" title="Zoom out">−</button>
+                        <span id="wbZoomLabel">100%</span>
+                        <button class="wb-tool-btn" onclick="wbZoom(0.25)" title="Zoom in">+</button>
+                        <button class="wb-tool-btn" onclick="wbZoomReset()" title="Reset zoom">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <input type="file" id="wb-file-input" accept="image/*" onchange="wbAddImage(event)">
+    </div>
+</div>
+
+<div id="wb-confirm-overlay">
+    <div id="wb-confirm-card">
+        <h3>Clear the whole board?</h3>
+        <p>This removes everything for everyone here. It can't be undone.</p>
+        <div class="wb-confirm-actions">
+            <button id="wb-cancel-clear" onclick="wbCloseConfirm()">Cancel</button>
+            <button id="wb-do-clear" onclick="wbDoClear()">Clear it</button>
+        </div>
+    </div>
+</div>
+
+<div id="wb-invite-overlay" onclick="if(event.target===this) wbCloseInvite()">
+    <div id="wb-invite-sheet">
+        <div class="wb-sheet-handle"></div>
+        <div class="wb-sheet-header">
+            <h3>Invite people</h3>
+            <button class="wb-sheet-close" onclick="wbCloseInvite()" title="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+        </div>
+        <div class="wb-sheet-body">
+            <div class="wb-sheet-section-label">Board link</div>
+            <div class="wb-invite-row">
+                <input type="text" id="wbInviteLink" readonly onclick="this.select()">
+                <button class="wb-invite-copy" onclick="wbCopyInviteLink()">Copy</button>
+            </div>
+
+            <button class="wb-sheet-action" id="wbContactsBtn" onclick="wbPickContacts()" style="display:none;">
+                <span class="wb-sheet-action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                <span class="wb-sheet-action-text">
+                    <span class="wb-sheet-action-title">Choose from contacts</span>
+                    <span class="wb-sheet-action-sub">Pick people from your phone</span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+            <div id="wbContactList"></div>
+
+            <button class="wb-sheet-action" id="wbNativeShareBtn" onclick="wbNativeShare()" style="display:none;">
+                <span class="wb-sheet-action-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>
+                </span>
+                <span class="wb-sheet-action-text">
+                    <span class="wb-sheet-action-title">Share link via…</span>
+                    <span class="wb-sheet-action-sub">WhatsApp, email, and more</span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="/static/vendor/socket.io.min.js"></script>
+<script>
+const myPhone   = {{ phone|tojson }};
+const wbRoom    = {{ room|tojson }};
+const boardTitle= {{ board_title|tojson }};
+const backUrl   = {{ back_url|tojson }};
+const myName    = {{ (my_name if my_name is defined else phone)|tojson }};
+
+function wbGoBack() {
+    if (document.referrer) { window.history.back(); } else { window.location.href = backUrl; }
+}
+
+// ── Canvas setup ──────────────────────────────────────────────
+const wrap    = document.getElementById('wb-canvas-wrap');
+const stage   = document.getElementById('wb-stage');
+const canvas  = document.getElementById('wb-canvas');
+const ctx     = canvas.getContext('2d');
+const pcanvas = document.getElementById('wb-preview-canvas');
+const pctx    = pcanvas.getContext('2d');
+const cursorLayer = document.getElementById('wb-cursor-layer');
+
+let allShapes = [];      // full replay history, so we can redraw on resize
+const CURSOR_COLORS = ['#e74c3c','#2980b9','#27ae60','#f39c12','#8e44ad','#16a085','#d35400'];
+function colorForPhone(p) {
+    let h = 0; for (let i=0;i<p.length;i++) h = (h*31 + p.charCodeAt(i)) >>> 0;
+    return CURSOR_COLORS[h % CURSOR_COLORS.length];
+}
+
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = wrap.clientWidth, h = wrap.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+    pcanvas.width = w * dpr; pcanvas.height = h * dpr;
+    pcanvas.style.width = w + 'px'; pcanvas.style.height = h + 'px';
+    stage.style.width = w + 'px'; stage.style.height = h + 'px';
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    pctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    redrawAll();
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ── Shape rendering (shared by main canvas + live preview) ─────
+function strokePath(c, shape) {
+    const pts = shape.points;
+    if (!pts || pts.length === 0) return;
+    c.save();
+    c.lineJoin = 'round'; c.lineCap = 'round';
+    c.strokeStyle = shape.tool === 'eraser' ? '#ffffff' : shape.color;
+    c.lineWidth = shape.size;
+    c.beginPath();
+    c.moveTo(pts[0][0], pts[0][1]);
+    if (pts.length === 1) c.lineTo(pts[0][0] + 0.1, pts[0][1] + 0.1);
+    for (let i = 1; i < pts.length; i++) {
+        const [x, y] = pts[i]; const [px, py] = pts[i - 1];
+        c.quadraticCurveTo(px, py, (px + x) / 2, (py + y) / 2);
+    }
+    c.stroke();
+    c.restore();
+}
+
+const imageCache = {};
+function drawImageShape(c, shape) {
+    let img = imageCache[shape.id];
+    if (img) { c.drawImage(img, shape.x, shape.y, shape.w, shape.h); return; }
+    img = new Image();
+    img.onload = () => { imageCache[shape.id] = img; c.drawImage(img, shape.x, shape.y, shape.w, shape.h); };
+    img.src = shape.src;
+}
+
+function drawLineShape(c, s) {
+    c.save(); c.lineCap = 'round'; c.strokeStyle = s.color; c.lineWidth = s.size;
+    c.beginPath(); c.moveTo(s.x1, s.y1); c.lineTo(s.x2, s.y2); c.stroke(); c.restore();
+}
+function drawArrowShape(c, s) {
+    drawLineShape(c, s);
+    const ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    const head = 8 + s.size;
+    c.save(); c.strokeStyle = s.color; c.lineWidth = s.size; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.beginPath();
+    c.moveTo(s.x2 - head * Math.cos(ang - 0.5), s.y2 - head * Math.sin(ang - 0.5));
+    c.lineTo(s.x2, s.y2);
+    c.lineTo(s.x2 - head * Math.cos(ang + 0.5), s.y2 - head * Math.sin(ang + 0.5));
+    c.stroke(); c.restore();
+}
+function drawRectShape(c, s) {
+    c.save(); c.strokeStyle = s.color; c.lineWidth = s.size; c.lineJoin = 'round';
+    c.strokeRect(s.x, s.y, s.w, s.h); c.restore();
+}
+function drawEllipseShape(c, s) {
+    c.save(); c.strokeStyle = s.color; c.lineWidth = s.size;
+    c.beginPath(); c.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w) / 2, Math.abs(s.h) / 2, 0, 0, Math.PI * 2);
+    c.stroke(); c.restore();
+}
+function drawTextShape(c, s) {
+    c.save(); c.fillStyle = s.color; c.font = (s.size || 20) + 'px DM Sans, sans-serif'; c.textBaseline = 'top';
+    (s.text || '').split('\n').forEach((line, i) => c.fillText(line, s.x, s.y + i * (s.size || 20) * 1.25));
+    c.restore();
+}
+function drawStickyShape(c, s) {
+    c.save();
+    c.fillStyle = s.color || '#fff59d';
+    c.shadowColor = 'rgba(0,0,0,0.18)'; c.shadowBlur = 6; c.shadowOffsetY = 3;
+    roundRect(c, s.x, s.y, s.w, s.h, 8); c.fill();
+    c.shadowColor = 'transparent';
+    c.fillStyle = '#2b2b1a'; c.font = '15px DM Sans, sans-serif'; c.textBaseline = 'top';
+    const padding = 10, lineH = 19;
+    wrapText(c, s.text || '', s.x + padding, s.y + padding, s.w - padding * 2, lineH);
+    c.restore();
+}
+function roundRect(c, x, y, w, h, r) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+    c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r);
+    c.closePath();
+}
+function wrapText(c, text, x, y, maxW, lineH) {
+    const words = text.split(/\s+/);
+    let line = '', cy = y;
+    words.forEach(word => {
+        const test = line ? line + ' ' + word : word;
+        if (c.measureText(test).width > maxW && line) { c.fillText(line, x, cy); line = word; cy += lineH; }
+        else line = test;
+    });
+    if (line) c.fillText(line, x, cy);
+}
+
+function drawShape(shape, c) {
+    c = c || ctx;
+    switch (shape.type) {
+        case 'image': drawImageShape(c, shape); break;
+        case 'line': drawLineShape(c, shape); break;
+        case 'arrow': drawArrowShape(c, shape); break;
+        case 'rect': drawRectShape(c, shape); break;
+        case 'ellipse': drawEllipseShape(c, shape); break;
+        case 'text': drawTextShape(c, shape); break;
+        case 'sticky': drawStickyShape(c, shape); break;
+        default: strokePath(c, shape); // freehand stroke
+    }
+    if (shape.id === selectedId) drawSelectionOutline(c, shape);
+}
+
+function drawSelectionOutline(c, shape) {
+    const b = shapeBounds(shape);
+    if (!b) return;
+    c.save();
+    c.strokeStyle = '#2ec4b6'; c.lineWidth = 1.5; c.setLineDash([5, 4]);
+    c.strokeRect(b.x - 6, b.y - 6, b.w + 12, b.h + 12);
+    c.restore();
+}
+
+function redrawAll() {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.restore();
+    allShapes.forEach(s => drawShape(s));
+}
+
+// ── Bounds / hit-testing / move (used by select tool) ───────────
+function shapeBounds(s) {
+    switch (s.type) {
+        case 'image': case 'rect': case 'sticky':
+            return { x: Math.min(s.x, s.x + s.w), y: Math.min(s.y, s.y + s.h), w: Math.abs(s.w), h: Math.abs(s.h) };
+        case 'ellipse':
+            return { x: Math.min(s.x, s.x + s.w), y: Math.min(s.y, s.y + s.h), w: Math.abs(s.w), h: Math.abs(s.h) };
+        case 'line': case 'arrow':
+            return { x: Math.min(s.x1, s.x2), y: Math.min(s.y1, s.y2), w: Math.abs(s.x2 - s.x1) || 1, h: Math.abs(s.y2 - s.y1) || 1 };
+        case 'text':
+            return { x: s.x, y: s.y, w: Math.max(30, (s.text || '').length * (s.size || 20) * 0.55), h: (s.size || 20) * 1.3 };
+        default: {
+            const pts = s.points || [];
+            if (!pts.length) return null;
+            let minX = pts[0][0], maxX = pts[0][0], minY = pts[0][1], maxY = pts[0][1];
+            pts.forEach(([x, y]) => { minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y); });
+            return { x: minX, y: minY, w: Math.max(1, maxX - minX), h: Math.max(1, maxY - minY) };
+        }
+    }
+}
+function hitTest(x, y) {
+    for (let i = allShapes.length - 1; i >= 0; i--) {
+        const b = shapeBounds(allShapes[i]);
+        if (!b) continue;
+        const pad = 8;
+        if (x >= b.x - pad && x <= b.x + b.w + pad && y >= b.y - pad && y <= b.y + b.h + pad) return allShapes[i];
+    }
+    return null;
+}
+function translateShape(s, dx, dy) {
+    switch (s.type) {
+        case 'image': case 'rect': case 'ellipse': case 'sticky': case 'text':
+            s.x += dx; s.y += dy; break;
+        case 'line': case 'arrow':
+            s.x1 += dx; s.y1 += dy; s.x2 += dx; s.y2 += dy; break;
+        default:
+            (s.points || []).forEach(p => { p[0] += dx; p[1] += dy; });
+    }
+}
+
+// ── Socket setup ──────────────────────────────────────────────
+const socket = io({ transports: ['websocket', 'polling'] });
+const statusDot = document.getElementById('wbStatusDot');
+const statusText = document.getElementById('wbStatusText');
+
+socket.on('connect', () => {
+    statusDot.classList.add('live'); statusText.textContent = 'Live';
+    socket.emit('wb_join', { room: wbRoom, phone: myPhone, name: myName });
+});
+socket.on('disconnect', () => {
+    statusDot.classList.remove('live'); statusText.textContent = 'Reconnecting…';
+});
+
+socket.on('wb_history', (data) => {
+    allShapes = (data.shapes || []).slice();
+    resizeCanvas();
+    renderAvatars(data.participants || []);
+});
+socket.on('wb_presence', (data) => renderAvatars(data.participants || []));
+
+socket.on('wb_stroke', (data) => { if (data.shape) { allShapes.push(data.shape); drawShape(data.shape); } });
+socket.on('wb_image', (data) => { if (data.shape) { allShapes.push(data.shape); drawShape(data.shape); } });
+socket.on('wb_shape', (data) => { if (data.shape) { allShapes.push(data.shape); drawShape(data.shape); } });
+socket.on('wb_shape_update', (data) => {
+    if (!data.shape) return;
+    const i = allShapes.findIndex(s => s.id === data.shape.id);
+    if (i >= 0) allShapes[i] = data.shape; else allShapes.push(data.shape);
+    redrawAll();
+});
+socket.on('wb_delete', (data) => {
+    if (!data.id) return;
+    allShapes = allShapes.filter(s => s.id !== data.id);
+    if (selectedId === data.id) wbDeselect();
+    redrawAll();
+});
+socket.on('wb_clear', (data) => {
+    allShapes = []; redrawAll();
+    if (data && data.phone && data.phone !== myPhone) showToast('Board cleared');
+});
+
+// Live in-progress strokes from others (not yet finalized/stored)
+const liveRemoteStrokes = {};
+socket.on('wb_draw_move', (data) => {
+    if (!data.stroke_id) return;
+    const key = data.stroke_id;
+    const prevLen = liveRemoteStrokes[key] ? liveRemoteStrokes[key].length : 0;
+    liveRemoteStrokes[key] = data.points;
+    const pts = data.points;
+    if (pts.length < 2) return;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = data.tool === 'eraser' ? '#ffffff' : data.color;
+    ctx.lineWidth = data.size;
+    ctx.beginPath();
+    const start = Math.max(prevLen - 1, 0);
+    ctx.moveTo(pts[start][0], pts[start][1]);
+    for (let i = start + 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.stroke(); ctx.restore();
+});
+
+// Remote cursors
+const cursorEls = {};
+socket.on('wb_cursor', (data) => {
+    if (!data.phone || data.phone === myPhone) return;
+    let el = cursorEls[data.phone];
+    if (!el) {
+        el = document.createElement('div');
+        el.className = 'wb-remote-cursor';
+        const color = colorForPhone(data.phone);
+        el.innerHTML = `<div class="wb-remote-dot" style="background:${color}"></div><div class="wb-remote-label" style="background:${color}">${(data.name || data.phone)}</div>`;
+        cursorLayer.appendChild(el);
+        cursorEls[data.phone] = el;
+    }
+    el.style.left = data.x + 'px'; el.style.top = data.y + 'px';
+    clearTimeout(el._fadeTimer);
+    el.style.opacity = '1';
+    el._fadeTimer = setTimeout(() => { el.style.opacity = '0'; }, 2500);
+});
+
+function renderAvatars(participants) {
+    const wrapEl = document.getElementById('wb-avatars');
+    wrapEl.innerHTML = '';
+    participants.slice(0, 4).forEach(p => {
+        const d = document.createElement('div');
+        d.className = 'wb-avatar';
+        d.style.background = colorForPhone(p.phone);
+        d.textContent = (p.name || p.phone || '?')[0].toUpperCase();
+        d.title = p.name || p.phone;
+        wrapEl.appendChild(d);
+    });
+    if (participants.length > 4) {
+        const d = document.createElement('div');
+        d.className = 'wb-avatar'; d.style.background = 'var(--primary-light)';
+        d.textContent = '+' + (participants.length - 4);
+        wrapEl.appendChild(d);
+    }
+}
+
+let toastTimer;
+function showToast(msg) {
+    const t = document.getElementById('wb-toast');
+    t.textContent = msg; t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── Broadcast helpers ────────────────────────────────────────
+function broadcastAdd(shape) {
+    if (shape.type === 'stroke' || shape.type === undefined && shape.points) socket.emit('wb_stroke', { room: wbRoom, stroke: shape, phone: myPhone });
+    else if (shape.type === 'image') socket.emit('wb_image', { room: wbRoom, image: shape, phone: myPhone });
+    else socket.emit('wb_shape', { room: wbRoom, shape, phone: myPhone });
+}
+function broadcastUpdate(shape) { socket.emit('wb_shape_update', { room: wbRoom, shape, phone: myPhone }); }
+function broadcastDelete(id) { socket.emit('wb_delete', { room: wbRoom, id, phone: myPhone }); }
+
+// ── Undo / redo (covers everything this user added or deleted) ─
+let myActions = [];
+let redoStack = [];
+function recordAction(op, shape) {
+    myActions.push({ op, shape: JSON.parse(JSON.stringify(shape)) });
+    if (myActions.length > 100) myActions.shift();
+    redoStack = [];
+    updateUndoRedoButtons();
+}
+function removeShapeLocal(id) {
+    allShapes = allShapes.filter(s => s.id !== id);
+    if (selectedId === id) wbDeselect();
+}
+function wbUndo() {
+    const last = myActions.pop();
+    if (!last) { showToast('Nothing to undo'); return; }
+    if (last.op === 'add') { removeShapeLocal(last.shape.id); broadcastDelete(last.shape.id); }
+    else { allShapes.push(last.shape); broadcastAdd(last.shape); }
+    redoStack.push(last);
+    redrawAll(); updateUndoRedoButtons();
+}
+function wbRedo() {
+    const last = redoStack.pop();
+    if (!last) { showToast('Nothing to redo'); return; }
+    if (last.op === 'add') { allShapes.push(last.shape); broadcastAdd(last.shape); }
+    else { removeShapeLocal(last.shape.id); broadcastDelete(last.shape.id); }
+    myActions.push(last);
+    redrawAll(); updateUndoRedoButtons();
+}
+function updateUndoRedoButtons() {
+    document.getElementById('wbUndoBtn').disabled = myActions.length === 0;
+    document.getElementById('wbRedoBtn').disabled = redoStack.length === 0;
+}
+
+// ── Tool / color / size state ───────────────────────────────────
+const COLORS = ['#1a2e2f','#e74c3c','#2980b9','#27ae60','#f39c12','#8e44ad','#16a085','#d35400','#c2185b','#546e7a','#ffffff'];
+let currentColor = localStorage.getItem('wb_color') || '#1a2e2f';
+let currentSize = parseInt(localStorage.getItem('wb_size') || '4', 10);
+let tool = 'pen';
+let selectedId = null;
+let zoomScale = 1;
+
+function genId() { return myPhone + '_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7); }
+
+function buildSwatches() {
+    const grid = document.getElementById('wbSwatchGrid');
+    grid.innerHTML = '';
+    COLORS.forEach(col => {
+        const b = document.createElement('button');
+        b.className = 'wb-swatch' + (col === currentColor ? ' active' : '');
+        b.style.background = col;
+        if (col === '#ffffff') b.style.border = '2px solid var(--border)';
+        b.title = col;
+        b.onclick = () => wbApplyColor(col);
+        grid.appendChild(b);
+    });
+    const custom = document.createElement('label');
+    custom.className = 'wb-swatch custom';
+    custom.title = 'Custom color';
+    const input = document.createElement('input');
+    input.type = 'color'; input.value = currentColor;
+    input.oninput = (e) => wbApplyColor(e.target.value);
+    custom.appendChild(input);
+    grid.appendChild(custom);
+}
+function wbApplyColor(col) {
+    currentColor = col;
+    localStorage.setItem('wb_color', col);
+    document.getElementById('wbColorPreview').style.background = col;
+    buildSwatches();
+    if (selectedId) applyStyleToSelected();
+}
+function wbSetSize(val) {
+    currentSize = parseInt(val, 10);
+    localStorage.setItem('wb_size', currentSize);
+    const px = Math.max(4, Math.min(28, currentSize));
+    document.getElementById('wbSizeDot').style.width = px + 'px';
+    document.getElementById('wbSizeDot').style.height = px + 'px';
+    document.getElementById('wbSizeDotBig').style.width = px + 'px';
+    document.getElementById('wbSizeDotBig').style.height = px + 'px';
+    document.getElementById('wbSizeSlider').value = currentSize;
+    if (selectedId) applyStyleToSelected();
+}
+function applyStyleToSelected() {
+    const s = allShapes.find(sh => sh.id === selectedId);
+    if (!s || s.type === 'image') return;
+    if ('color' in s || s.type === 'text' || s.type === 'sticky') s.color = currentColor;
+    if ('size' in s) s.size = currentSize;
+    redrawAll();
+    broadcastUpdate(s);
+}
+
+function wbSetTool(t) {
+    tool = t;
+    wbDeselect();
+    closeAllPopovers();
+    document.querySelectorAll('.wb-tool-btn').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('toolBtn-' + t);
+    if (btn) btn.classList.add('active');
+    wrap.classList.toggle('wb-pan-mode', t === 'pan');
+    canvas.style.cursor = (t === 'pan') ? 'grab' : (t === 'select') ? 'default' : 'crosshair';
+}
+
+
+function wbTogglePopover(name) {
+    const pop = document.getElementById('pop-' + name);
+    const wasOpen = pop.classList.contains('show');
+    closeAllPopovers();
+    if (!wasOpen) pop.classList.add('show');
+    if (name === 'more') {
+        const btn = document.getElementById('toolBtn-more');
+        if (btn.classList.contains('wb-attn')) {
+            btn.classList.remove('wb-attn');
+            localStorage.setItem('wb_tools_discovered', '1');
+        }
+    }
+}
+function closeAllPopovers() { document.querySelectorAll('.wb-popover').forEach(p => p.classList.remove('show')); }
+document.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('.wb-tool-btn') && !e.target.closest('.wb-popover')) closeAllPopovers();
+}, true);
+
+function wbOpenInvite() {
+    closeAllPopovers();
+    document.getElementById('wbInviteLink').value = window.location.href;
+    document.getElementById('wbNativeShareBtn').style.display = navigator.share ? 'flex' : 'none';
+    document.getElementById('wbContactsBtn').style.display = ('contacts' in navigator && 'ContactsManager' in window) ? 'flex' : 'none';
+    document.getElementById('wbContactList').innerHTML = '';
+    document.getElementById('wb-invite-overlay').classList.add('show');
+}
+function wbCloseInvite() {
+    document.getElementById('wb-invite-overlay').classList.remove('show');
+}
+function wbCopyInviteLink() {
+    const input = document.getElementById('wbInviteLink');
+    input.select();
+    input.setSelectionRange(0, 99999);
+    const btn = document.querySelector('.wb-invite-copy');
+    const done = () => {
+        showToast('Link copied');
+        if (btn) { btn.textContent = 'Copied'; btn.classList.add('copied'); setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500); }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(done).catch(() => { document.execCommand('copy'); done(); });
+    } else {
+        document.execCommand('copy'); done();
+    }
+}
+function wbNativeShare() {
+    if (navigator.share) {
+        navigator.share({ title: document.title, url: window.location.href }).catch(() => {});
+    }
+}
+
+// ── Invite people via device contacts ───────────────────────────
+async function wbPickContacts() {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+        showToast('Contact picker not supported on this device');
+        return;
+    }
+    try {
+        const contacts = await navigator.contacts.select(['name', 'tel'], { multiple: true });
+        renderPickedContacts(contacts);
+    } catch (err) {
+        // user cancelled the picker or denied permission — nothing to do
+    }
+}
+function renderPickedContacts(contacts) {
+    const wrap = document.getElementById('wbContactList');
+    wrap.innerHTML = '';
+    if (!contacts || !contacts.length) return;
+    contacts.forEach(c => {
+        const name = (c.name && c.name[0]) || 'Contact';
+        const tel = c.tel && c.tel[0];
+        const row = document.createElement('div');
+        row.className = 'wb-contact-row';
+        const info = document.createElement('div');
+        info.style.minWidth = '0';
+        const nameEl = document.createElement('div');
+        nameEl.className = 'wb-contact-name'; nameEl.textContent = name;
+        info.appendChild(nameEl);
+        if (tel) {
+            const telEl = document.createElement('div');
+            telEl.className = 'wb-contact-tel'; telEl.textContent = tel;
+            info.appendChild(telEl);
+        }
+        row.appendChild(info);
+        if (tel) {
+            const sendBtn = document.createElement('button');
+            sendBtn.className = 'wb-contact-send';
+            sendBtn.textContent = 'Send link';
+            sendBtn.onclick = () => { wbSendSmsInvite(tel); sendBtn.textContent = 'Sent'; sendBtn.classList.add('sent'); };
+            row.appendChild(sendBtn);
+        }
+        wrap.appendChild(row);
+    });
+}
+function wbSendSmsInvite(tel) {
+    const link = document.getElementById('wbInviteLink').value;
+    const msg = encodeURIComponent('Join our whiteboard: ' + link);
+    window.location.href = 'sms:' + encodeURIComponent(tel) + '?body=' + msg;
+}
+
+// ── Zoom (CSS zoom on the stage; wrap becomes scrollable) ───────
+function wbZoom(delta) {
+    zoomScale = Math.max(0.5, Math.min(3, Math.round((zoomScale + delta) * 100) / 100));
+    stage.style.zoom = zoomScale;
+    document.getElementById('wbZoomLabel').textContent = Math.round(zoomScale * 100) + '%';
+}
+function wbZoomReset() { zoomScale = 1; stage.style.zoom = 1; document.getElementById('wbZoomLabel').textContent = '100%'; }
+
+// ── Pointer coordinate helper (accounts for zoom + scroll) ──────
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    const point = e.touches ? e.touches[0] : e;
+    return [(point.clientX - rect.left) / zoomScale, (point.clientY - rect.top) / zoomScale];
+}
+
+// ── Selection bar ────────────────────────────────────────────
+function wbSelect(shape) {
+    selectedId = shape.id;
+    document.getElementById('wb-selbar').classList.add('show');
+    document.getElementById('wbSelEditBtn').style.display = (shape.type === 'text' || shape.type === 'sticky') ? 'flex' : 'none';
+    redrawAll();
+}
+function wbDeselect() {
+    selectedId = null;
+    document.getElementById('wb-selbar').classList.remove('show');
+    redrawAll();
+}
+function wbDeleteSelected() {
+    const s = allShapes.find(sh => sh.id === selectedId);
+    if (!s) return;
+    removeShapeLocal(s.id);
+    broadcastDelete(s.id);
+    recordAction('delete', s);
+    redrawAll();
+}
+function wbDuplicateSelected() {
+    const s = allShapes.find(sh => sh.id === selectedId);
+    if (!s) return;
+    const copy = JSON.parse(JSON.stringify(s));
+    copy.id = genId();
+    translateShape(copy, 16, 16);
+    allShapes.push(copy);
+    broadcastAdd(copy);
+    recordAction('add', copy);
+    wbSelect(copy);
+}
+function wbEditSelectedText() {
+    const s = allShapes.find(sh => sh.id === selectedId);
+    if (!s) return;
+    openEditor(s);
+}
+
+// ── Inline text editor (used by text tool, sticky tool, and re-edit) ─
+let activeEditor = null;
+function openEditor(existingShape, atPoint) {
+    if (activeEditor) commitEditor();
+    const isSticky = existingShape ? existingShape.type === 'sticky' : tool === 'sticky';
+    const ta = document.createElement('textarea');
+    ta.className = 'wb-editor' + (isSticky ? ' wb-sticky-editor' : '');
+    let shape = existingShape;
+    if (!shape) {
+        const [x, y] = atPoint;
+        shape = isSticky
+            ? { id: genId(), type: 'sticky', x: x - 80, y: y - 60, w: 160, h: 120, text: '', color: currentColor }
+            : { id: genId(), type: 'text', x, y, text: '', color: currentColor, size: 14 + currentSize };
+    }
+    const b = shapeBounds(shape);
+    ta.style.left = b.x + 'px'; ta.style.top = b.y + 'px';
+    ta.style.width = (isSticky ? b.w : Math.max(120, b.w)) + 'px';
+    ta.style.height = (isSticky ? b.h : Math.max(34, b.h)) + 'px';
+    ta.style.fontSize = (isSticky ? 15 : (shape.size || 20)) + 'px';
+    ta.style.color = isSticky ? '#2b2b1a' : shape.color;
+    ta.value = shape.text || '';
+    ta.placeholder = isSticky ? 'Note…' : 'Type…';
+    wrap.appendChild(ta);
+    ta.focus();
+    activeEditor = { ta, shape, isNew: !existingShape };
+    ta.addEventListener('blur', commitEditor);
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.target.value = shape.text || ''; ta.blur(); } });
+}
+function commitEditor() {
+    if (!activeEditor) return;
+    const { ta, shape, isNew } = activeEditor;
+    activeEditor = null;
+    const text = ta.value.trim();
+    ta.remove();
+    if (!text) return; // discard empty text/sticky
+    shape.text = ta.value;
+    if (isNew) {
+        allShapes.push(shape);
+        broadcastAdd(shape);
+        recordAction('add', shape);
+    } else {
+        broadcastUpdate(shape);
+    }
+    redrawAll();
+}
+
+// ── Drawing / interaction state machine ─────────────────────────
+let drawing = false;
+let currentStroke = null;
+let shapeStart = null;
+let dragging = null;      // { shape, startX, startY }
+let lastCursorEmit = 0;
+
+function startDraw(e) {
+    if (tool === 'pan') return; // let native scrolling handle it
+    e.preventDefault();
+    const [x, y] = getPos(e);
+
+    if (tool === 'select') {
+        const hit = hitTest(x, y);
+        if (hit) { wbSelect(hit); dragging = { shape: hit, startX: x, startY: y }; }
+        else wbDeselect();
+        return;
+    }
+    if (tool === 'text' || tool === 'sticky') { openEditor(null, [x, y]); return; }
+    if (['line', 'arrow', 'rect', 'ellipse'].includes(tool)) {
+        drawing = true; shapeStart = [x, y];
+        return;
+    }
+    // pen / eraser
+    drawing = true;
+    currentStroke = {
+        id: genId(), type: 'stroke', tool: tool === 'eraser' ? 'eraser' : 'pen',
+        color: currentColor, size: currentSize * (tool === 'eraser' ? 2.5 : 1),
+        points: [[x, y]],
+    };
+}
+
+function moveDraw(e) {
+    const [x, y] = getPos(e);
+    const now = performance.now();
+    if (now - lastCursorEmit > 45) {
+        lastCursorEmit = now;
+        socket.emit('wb_cursor', { room: wbRoom, phone: myPhone, name: myName, x, y });
+    }
+
+    if (dragging) {
+        e.preventDefault();
+        const dx = x - dragging.startX, dy = y - dragging.startY;
+        translateShape(dragging.shape, dx, dy);
+        dragging.startX = x; dragging.startY = y;
+        redrawAll();
+        return;
+    }
+
+    if (!drawing) return;
+    e.preventDefault();
+
+    if (shapeStart) {
+        pctx.save(); pctx.setTransform(window.devicePixelRatio || 1, 0, 0, window.devicePixelRatio || 1, 0, 0);
+        pctx.clearRect(0, 0, pcanvas.width, pcanvas.height);
+        pctx.restore();
+        const preview = shapeFromDrag(tool, shapeStart, [x, y]);
+        drawShape(preview, pctx);
+        return;
+    }
+
+    if (!currentStroke) return;
+    currentStroke.points.push([x, y]);
+    const pts = currentStroke.points;
+    ctx.save(); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.strokeStyle = currentStroke.tool === 'eraser' ? '#ffffff' : currentStroke.color;
+    ctx.lineWidth = currentStroke.size;
+    ctx.beginPath();
+    ctx.moveTo(pts[pts.length - 2][0], pts[pts.length - 2][1]);
+    ctx.lineTo(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+    ctx.stroke(); ctx.restore();
+
+    socket.emit('wb_draw_move', {
+        room: wbRoom, stroke_id: currentStroke.id, points: currentStroke.points,
+        color: currentStroke.color, size: currentStroke.size, tool: currentStroke.tool, phone: myPhone,
+    });
+}
+
+function shapeFromDrag(t, start, end) {
+    const [x1, y1] = start, [x2, y2] = end;
+    if (t === 'line') return { id: 'preview', type: 'line', x1, y1, x2, y2, color: currentColor, size: currentSize };
+    if (t === 'arrow') return { id: 'preview', type: 'arrow', x1, y1, x2, y2, color: currentColor, size: currentSize };
+    const x = Math.min(x1, x2), y = Math.min(y1, y2), w = Math.abs(x2 - x1), h = Math.abs(y2 - y1);
+    return { id: 'preview', type: t, x, y, w, h, color: currentColor, size: currentSize };
+}
+
+function endDraw(e) {
+    if (dragging) {
+        broadcastUpdate(dragging.shape);
+        dragging = null;
+        return;
+    }
+    if (shapeStart) {
+        const [x, y] = e && e.changedTouches ? [e.changedTouches[0].clientX, e.changedTouches[0].clientY] : lastPointerPos;
+        const end = lastPointerPos || shapeStart;
+        const shape = shapeFromDrag(tool, shapeStart, end);
+        shape.id = genId();
+        pctx.save(); pctx.setTransform(1, 0, 0, 1, 0, 0); pctx.clearRect(0, 0, pcanvas.width, pcanvas.height); pctx.restore();
+        const b = shapeBounds(shape);
+        const tiny = (shape.type === 'line' || shape.type === 'arrow') ? (b.w < 4 && b.h < 4) : (b.w < 4 || b.h < 4);
+        if (!tiny) {
+            allShapes.push(shape); drawShape(shape);
+            broadcastAdd(shape); recordAction('add', shape);
+        }
+        drawing = false; shapeStart = null;
+        return;
+    }
+    if (!drawing || !currentStroke) { drawing = false; return; }
+    drawing = false;
+    if (currentStroke.points.length === 1) drawShape(currentStroke);
+    allShapes.push(currentStroke);
+    broadcastAdd(currentStroke);
+    recordAction('add', currentStroke);
+    currentStroke = null;
+}
+
+let lastPointerPos = null;
+canvas.addEventListener('pointerdown', startDraw);
+canvas.addEventListener('pointermove', (e) => { lastPointerPos = getPos(e); moveDraw(e); });
+window.addEventListener('pointerup', endDraw);
+window.addEventListener('pointercancel', endDraw);
+
+// ── Keyboard shortcuts (desktop convenience) ─────────────────────
+window.addEventListener('keydown', (e) => {
+    if (activeEditor || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    const map = { v: 'select', h: 'pan', p: 'pen', e: 'eraser', l: 'line', a: 'arrow', r: 'rect', o: 'ellipse', t: 'text', n: 'sticky' };
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? wbRedo() : wbUndo(); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); wbRedo(); return; }
+    if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) { e.preventDefault(); wbDeleteSelected(); return; }
+    if (e.key === 'Escape') { wbDeselect(); return; }
+    if (map[e.key.toLowerCase()]) wbSetTool(map[e.key.toLowerCase()]);
+});
+
+// ── Add image ─────────────────────────────────────────────────
+function wbAddImage(evt) {
+    const file = evt.target.files[0];
+    evt.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+            const off = document.createElement('canvas');
+            const maxW = 480;
+            const scale = Math.min(1, maxW / img.width);
+            off.width = img.width * scale; off.height = img.height * scale;
+            off.getContext('2d').drawImage(img, 0, 0, off.width, off.height);
+            const dataUrl = off.toDataURL('image/jpeg', 0.72);
+
+            const w = Math.min(260, off.width), h = w * (off.height / off.width);
+            const shape = {
+                id: genId(), type: 'image', src: dataUrl,
+                x: (canvas.width / (window.devicePixelRatio || 1) - w) / 2,
+                y: (canvas.height / (window.devicePixelRatio || 1) - h) / 2,
+                w, h, phone: myPhone,
+            };
+            allShapes.push(shape);
+            drawShape(shape);
+            broadcastAdd(shape);
+            recordAction('add', shape);
+        };
+        img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+// ── Clear ─────────────────────────────────────────────────────
+function wbConfirmClear() { closeAllPopovers(); document.getElementById('wb-confirm-overlay').classList.add('show'); }
+function wbCloseConfirm() { document.getElementById('wb-confirm-overlay').classList.remove('show'); }
+function wbDoClear() {
+    wbCloseConfirm();
+    allShapes = []; myActions = []; redoStack = [];
+    updateUndoRedoButtons();
+    redrawAll();
+    socket.emit('wb_clear', { room: wbRoom, phone: myPhone });
+}
+
+// ── Save as PNG ───────────────────────────────────────────────
+function wbSaveImage() {
+    closeAllPopovers();
+    const link = document.createElement('a');
+    link.download = (boardTitle || 'whiteboard').replace(/[^a-z0-9]+/gi, '_') + '.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+}
+
+// ── First-run onboarding tip ─────────────────────────────────────
+function wbShowOnboard(force) {
+    const el = document.getElementById('wb-onboard');
+    if (force) { el.classList.add('show'); return; }
+    if (!localStorage.getItem('wb_onboarded_v1')) {
+        el.classList.add('show');
+        localStorage.setItem('wb_onboarded_v1', '1');
+    }
+}
+if (!localStorage.getItem('wb_tools_discovered')) {
+    document.getElementById('toolBtn-more').classList.add('wb-attn');
+}
+document.getElementById('wb-onboard').querySelector('button') // wired via inline onclick already
+document.getElementById('wb-onboard').addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON') document.getElementById('wb-onboard').classList.remove('show');
+});
+
+// ── Init ──────────────────────────────────────────────────────
+buildSwatches();
+wbApplyColor(currentColor);
+wbSetSize(currentSize);
+updateUndoRedoButtons();
+resizeCanvas();
+setTimeout(() => wbShowOnboard(false), 900);
+</script>
+</body>
+</html>

@@ -1229,6 +1229,10 @@
         contacts.forEach(c => { rows += generateContactHTML(c); });
         contactsPaneHTML = `<div id="contactsList" style="display:flex;flex-direction:column;gap:6px;">${rows}</div>`;
       }
+      // Ask the server for live online/last-seen status for everyone in this
+      // list. Runs after content.innerHTML below so the presence-dot/text
+      // elements referenced by phone number already exist in the DOM.
+      setTimeout(() => _cxWatchContactsPresence(contacts), 0);
 
       // Determine active tab
       const isContacts = _activeContactTab === 'contacts';
@@ -1665,10 +1669,14 @@
       return `
         <div class="deletable-row" data-type="contact" data-phone="${contact.contact_phone}" data-label="${displayName.replace(/"/g,'&quot;')}" data-action="Delete Contact" data-last-time="${contact.last_message_time || ''}">
           <a href="/chat/${encodeURIComponent(contact.contact_phone)}?phone=${encodeURIComponent(phone)}" class="cx-card" style="text-decoration:none;">
-            <div class="cx-avatar" style="background:linear-gradient(135deg,${avatarColor},#2ec4b6);">${avatarInner}</div>
+            <div class="cx-avatar" style="background:linear-gradient(135deg,${avatarColor},#2ec4b6);position:relative;">
+              ${avatarInner}
+              <span class="cx-presence-dot" data-presence-dot="${contact.contact_phone}" style="display:none;position:absolute;bottom:0;right:0;width:11px;height:11px;border-radius:50%;background:#2ecc71;border:2px solid #fff;"></span>
+            </div>
             <div class="cx-body">
               <div class="cx-name">${displayName}</div>
-              <div class="cx-preview">${previewHTML}</div>
+              <div class="cx-preview" data-preview="${contact.contact_phone}">${previewHTML}</div>
+              <div class="cx-presence-text" data-presence-text="${contact.contact_phone}" style="display:none;font-size:12px;color:#2ecc71;margin-top:1px;"></div>
             </div>
             <div class="cx-meta">
               ${timeStr ? `<span class="cx-time">${timeStr}</span>` : ''}
@@ -1677,6 +1685,87 @@
             <div class="cx-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
           </a>
         </div>`;
+    }
+
+    // ── Contact-list presence (online dot / "Last seen") ────────────────
+    // Same UTC-safe parsing as the 1:1 chat page, so times don't drift by
+    // several hours when the browser assumes a bare timestamp is local.
+    function _cxParseServerTime(isoStr) {
+      if (!isoStr) return null;
+      const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(isoStr);
+      return new Date(hasTZ ? isoStr : isoStr + 'Z');
+    }
+
+    function _cxFormatLastSeen(isoStr) {
+      if (!isoStr) return null;
+      const diff = Math.floor((Date.now() - _cxParseServerTime(isoStr)) / 1000);
+      if (diff < 60)  return 'Last seen just now';
+      if (diff < 3600) {
+        const m = Math.floor(diff / 60);
+        return `Last seen ${m} min${m>1?'s':''} ago`;
+      }
+      if (diff < 86400) {
+        const h = Math.floor(diff / 3600);
+        return `Last seen ${h} hour${h>1?'s':''} ago`;
+      }
+      const d = Math.floor(diff / 86400);
+      return `Last seen ${d} day${d>1?'s':''} ago`;
+    }
+
+    // phone -> 'online' | { lastOnline } ; used to keep "Last seen X ago" ticking
+    const _cxPresenceState = {};
+
+    function _cxApplyPresence(contactPhone, status, lastOnline) {
+      const dot  = document.querySelector(`[data-presence-dot="${CSS.escape(String(contactPhone))}"]`);
+      const text = document.querySelector(`[data-presence-text="${CSS.escape(String(contactPhone))}"]`);
+      const preview = document.querySelector(`[data-preview="${CSS.escape(String(contactPhone))}"]`);
+      if (!dot || !text) return;
+
+      if (status === 'online') {
+        _cxPresenceState[contactPhone] = { status: 'online' };
+        dot.style.display = 'block';
+        text.style.display = 'block';
+        text.textContent = 'Online';
+        text.style.color = '#2ecc71';
+        if (preview) preview.style.display = 'none';
+      } else {
+        _cxPresenceState[contactPhone] = { status: 'offline', lastOnline };
+        dot.style.display = 'none';
+        const label = _cxFormatLastSeen(lastOnline);
+        if (label) {
+          text.style.display = 'block';
+          text.textContent = label;
+          text.style.color = '#999';
+          if (preview) preview.style.display = 'none';
+        } else {
+          text.style.display = 'none';
+          if (preview) preview.style.display = '';
+        }
+      }
+    }
+
+    // Keep "Last seen X ago" fresh without waiting for another server event
+    setInterval(() => {
+      Object.keys(_cxPresenceState).forEach(phone => {
+        const state = _cxPresenceState[phone];
+        if (state.status === 'offline' && state.lastOnline) {
+          const text = document.querySelector(`[data-presence-text="${CSS.escape(String(phone))}"]`);
+          if (text) text.textContent = _cxFormatLastSeen(state.lastOnline);
+        }
+      });
+    }, 15000);
+
+    function _cxWatchContactsPresence(contacts) {
+      const phone = localStorage.getItem('exomnia_user_phone');
+      if (!phone || !contacts || !contacts.length) return;
+      const phones = contacts.map(c => c.contact_phone);
+      if (window._notifSocketRef && window._notifSocketRef.connected) {
+        window._notifSocketRef.emit('watch_contacts', { phone, contacts: phones });
+      } else {
+        // Socket not ready yet (e.g. contacts rendered before it connected) —
+        // retry once it's up rather than silently never showing presence.
+        window._pendingPresenceContacts = phones;
+      }
     }
 
     function filterContacts() {
@@ -1715,6 +1804,7 @@
         let html = '';
         filteredContacts.forEach(contact => { html += generateContactHTML(contact); });
         contactsList.innerHTML = html;
+        setTimeout(() => _cxWatchContactsPresence(filteredContacts), 0);
       }
     }
 
@@ -4525,11 +4615,29 @@
     const _notifPhone = localStorage.getItem('exomnia_user_phone');
     if (_notifPhone) {
       const notifSocket = io();
+      window._notifSocketRef = notifSocket;
       notifSocket.on('connect', () => {
         notifSocket.emit('register_user', { phone: _notifPhone });
         notifSocket.emit('set_presence', { phone: _notifPhone, status: document.hidden ? 'away' : 'online' });
+        // If contacts rendered before this socket connected, ask for their
+        // presence now instead of leaving the list without status forever.
+        if (window._pendingPresenceContacts && window._pendingPresenceContacts.length) {
+          notifSocket.emit('watch_contacts', { phone: _notifPhone, contacts: window._pendingPresenceContacts });
+          window._pendingPresenceContacts = null;
+        }
       });
       notifSocket.on('new_message_notification', data => window.exomniaNotify(data, false));
+
+      // Live per-contact online / "Last seen" updates on the dashboard list
+      notifSocket.on('presence_update', data => {
+        if (typeof _cxApplyPresence === 'function') {
+          _cxApplyPresence(data.phone, data.status, data.last_online);
+        }
+      });
+      // Initial snapshot for the whole visible contact list
+      notifSocket.on('contacts_presence_snapshot', data => {
+        (data.statuses || []).forEach(s => _cxApplyPresence(s.phone, s.status, s.last_online));
+      });
 
       // Let the server know when this device is backgrounded/foregrounded,
       // regardless of which page (Contacts/Social/etc.) is open — this is

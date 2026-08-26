@@ -1150,25 +1150,10 @@
     }
 
     function loadContacts(phone) {
-      // Clear out whatever the previous tab left behind immediately — this
-      // itself is NOT animated (no fade here), it just appears instantly.
-      // Only the REAL content below gets the fade-in. Fading in the
-      // skeleton too caused a second, disruptive animation restart the
-      // instant the (usually near-instant, local) fetch resolved and
-      // replaced it — which is what looked like a "flash".
-      const content = document.getElementById('main-content');
-      if (content) {
-        content.classList.remove('tab-fade-in');
-        content.style.transition = 'none';
-        content.style.transform = 'translateX(0)';
-        content.innerHTML = `
-          <h2>Chat</h2>
-          <div style="display:flex;flex-direction:column;gap:6px;">
-            ${'<div style="height:64px;border-radius:14px;background:linear-gradient(90deg,#e4f1f1,#eef7f7,#e4f1f1);background-size:200% 100%;animation:cxSkeletonShimmer 1.2s ease-in-out infinite;"></div>'.repeat(4)}
-          </div>
-          <style>@keyframes cxSkeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
-        `;
-      }
+      // Fetch FIRST, touch the DOM only once the real data is ready. The
+      // previous tab's content just stays exactly as it is (no skeleton,
+      // no placeholder) until the real contact list can replace it in one
+      // clean swap — nothing extra ever becomes visible in between.
       fetch(`/api/contacts?phone=${encodeURIComponent(phone)}`)
         .then(response => response.json())
         .then(contacts => {
@@ -2846,12 +2831,9 @@
           </div>`;
         return;
       }
-      content.innerHTML = `<div style="display:flex;justify-content:center;padding:40px 0;"><div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>
-        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
-      content.classList.remove('tab-fade-in');
-      content.style.transition = 'none';
-      content.style.transform = 'translateX(0)';
-
+      // Fetch first, render once — same reasoning as loadContacts: don't
+      // show any intermediate spinner/placeholder, just swap straight to
+      // the real profile the moment it's ready, with a single clean fade.
       fetch('/api/profile?phone=' + encodeURIComponent(phone))
         .then(r => r.json())
         .then(data => {

@@ -1150,12 +1150,17 @@
     }
 
     function loadContacts(phone) {
-      // Clear out whatever the previous tab left behind immediately, with a
-      // lightweight skeleton, and fade that in right away — so switching to
-      // Chat never shows a frozen frame of the previous tab while the
-      // contacts fetch is still in flight.
+      // Clear out whatever the previous tab left behind immediately — this
+      // itself is NOT animated (no fade here), it just appears instantly.
+      // Only the REAL content below gets the fade-in. Fading in the
+      // skeleton too caused a second, disruptive animation restart the
+      // instant the (usually near-instant, local) fetch resolved and
+      // replaced it — which is what looked like a "flash".
       const content = document.getElementById('main-content');
       if (content) {
+        content.classList.remove('tab-fade-in');
+        content.style.transition = 'none';
+        content.style.transform = 'translateX(0)';
         content.innerHTML = `
           <h2>Chat</h2>
           <div style="display:flex;flex-direction:column;gap:6px;">
@@ -1163,7 +1168,6 @@
           </div>
           <style>@keyframes cxSkeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
         `;
-        _fadeInMainContent(content);
       }
       fetch(`/api/contacts?phone=${encodeURIComponent(phone)}`)
         .then(response => response.json())
@@ -2844,7 +2848,9 @@
       }
       content.innerHTML = `<div style="display:flex;justify-content:center;padding:40px 0;"><div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
-      _fadeInMainContent(content);
+      content.classList.remove('tab-fade-in');
+      content.style.transition = 'none';
+      content.style.transform = 'translateX(0)';
 
       fetch('/api/profile?phone=' + encodeURIComponent(phone))
         .then(r => r.json())

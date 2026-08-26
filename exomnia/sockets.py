@@ -200,6 +200,13 @@ def handle_message(data):
         room = get_room(sender, receiver)
         # Invalidate message cache so next page load fetches fresh messages
         cache.clear_pattern(f"msgs_{min(sender,receiver)}_{max(sender,receiver)}")
+        # Also bust both sides' /api/contacts cache — without this, the
+        # Contacts page can keep serving a stale cached list (missing the
+        # new unread badge / last message preview) for up to 60s after a
+        # plain text message arrives, even though the live socket update
+        # already updated an already-open page correctly.
+        cache.delete(f"contacts_{sender}")
+        cache.delete(f"contacts_{receiver}")
 
         if not receiver_blocked_sender:
             emit('receive_message', {'id': message_id, 'sender': sender, 'receiver': receiver, 'message': message, 'temp_id': temp_id, 'timestamp': now_iso, 'status': 'sent'}, room=room)

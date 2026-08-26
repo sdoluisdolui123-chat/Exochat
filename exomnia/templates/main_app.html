@@ -1679,7 +1679,6 @@
               <div class="cx-presence-text" data-presence-text="${contact.contact_phone}" style="display:none;font-size:12px;color:#2ecc71;margin-top:1px;"></div>
             </div>
             <div class="cx-meta">
-              ${timeStr ? `<span class="cx-time">${timeStr}</span>` : ''}
               ${unread  ? `<span class="cx-badge">${unread > 99 ? '99+' : unread}</span>` : ''}
             </div>
             <div class="cx-chevron"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -4560,13 +4559,17 @@
 
       const meta = row.querySelector('.cx-meta');
       if (meta) {
-        let timeEl = meta.querySelector('.cx-time');
-        if (!timeEl) {
-          timeEl = document.createElement('span');
-          timeEl.className = 'cx-time';
-          meta.insertBefore(timeEl, meta.firstChild);
+        // Only groups show a relative-time chip; contacts show notification
+        // badges only (per product decision), so skip creating cx-time there.
+        if (data.type === 'group') {
+          let timeEl = meta.querySelector('.cx-time');
+          if (!timeEl) {
+            timeEl = document.createElement('span');
+            timeEl.className = 'cx-time';
+            meta.insertBefore(timeEl, meta.firstChild);
+          }
+          timeEl.textContent = 'now';
         }
-        timeEl.textContent = 'now';
 
         // Only bump the unread badge for messages the user received (not sent)
         const isSent = String(data.last_sender || data.sender) === String(myPhone);

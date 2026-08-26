@@ -4354,19 +4354,49 @@
   <script src="/static/vendor/socket.io.min.js"></script>
   <script>
   (function() {
+    // A fresh AudioContext starts life 'suspended' on most mobile browsers
+    // (autoplay policy) until a real user gesture unlocks it — that's why
+    // playNotifSound() can run with zero errors yet make no sound at all.
+    // Create ONE context up front and unlock it on the very first tap/key
+    // press anywhere on the page, then reuse it for every notification.
+    let _notifAudioCtx = null;
+    function _getNotifAudioCtx() {
+      if (!_notifAudioCtx) {
+        try { _notifAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+        catch (e) { return null; }
+      }
+      return _notifAudioCtx;
+    }
+    function _unlockNotifAudio() {
+      const ctx = _getNotifAudioCtx();
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    }
+    ['touchstart', 'mousedown', 'keydown'].forEach(evt =>
+      document.addEventListener(evt, _unlockNotifAudio, { once: true, passive: true })
+    );
+
     function playNotifSound() {
       try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const o = ctx.createOscillator();
-        const g = ctx.createGain();
-        o.type = 'sine';
-        o.frequency.setValueAtTime(880, ctx.currentTime);
-        o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
-        g.gain.setValueAtTime(0.0001, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.01);
-        g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
-        o.connect(g); g.connect(ctx.destination);
-        o.start(); o.stop(ctx.currentTime + 0.35);
+        const ctx = _getNotifAudioCtx();
+        if (!ctx) return;
+        const afterResume = () => {
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(880, ctx.currentTime);
+          o.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+          g.gain.setValueAtTime(0.0001, ctx.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.22, ctx.currentTime + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+          o.connect(g); g.connect(ctx.destination);
+          o.start(); o.stop(ctx.currentTime + 0.35);
+        };
+        // Still suspended (no gesture yet, or browser re-suspended it after
+        // the tab was backgrounded) — resume first, then play. If resume()
+        // is refused because there truly was no gesture yet, this simply
+        // stays silent instead of throwing, same as before.
+        if (ctx.state === 'suspended') ctx.resume().then(afterResume).catch(() => {});
+        else afterResume();
       } catch(e) {}
     }
 

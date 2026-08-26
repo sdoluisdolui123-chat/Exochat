@@ -1068,6 +1068,21 @@
       link.classList.add('cx-card-active');
     });
 
+    // Shared helper: restarts the tab-fade-in CSS animation on #main-content.
+    // Used both by the tab-switch wrapper (for tabs whose content is set
+    // synchronously) and by the async loaders below (chat/profile), which
+    // call it themselves once their real content actually lands in the DOM
+    // — instead of fading in whatever stale content from the previous tab
+    // still happened to be sitting there while their fetch was in flight.
+    function _fadeInMainContent(el) {
+      if (!el) return;
+      el.style.transition = 'none';
+      el.style.transform = 'translateX(0)';
+      el.classList.remove('tab-fade-in');
+      void el.offsetWidth; // restart the animation every time
+      el.classList.add('tab-fade-in');
+    }
+
     function openTab(tabName, element) {
       // Desktop two-pane chat view only applies while the Chat tab is open
       document.body.classList.toggle('chat-tab-active', tabName === 'chat');
@@ -1135,11 +1150,27 @@
     }
 
     function loadContacts(phone) {
+      // Clear out whatever the previous tab left behind immediately, with a
+      // lightweight skeleton, and fade that in right away — so switching to
+      // Chat never shows a frozen frame of the previous tab while the
+      // contacts fetch is still in flight.
+      const content = document.getElementById('main-content');
+      if (content) {
+        content.innerHTML = `
+          <h2>Chat</h2>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${'<div style="height:64px;border-radius:14px;background:linear-gradient(90deg,#e4f1f1,#eef7f7,#e4f1f1);background-size:200% 100%;animation:cxSkeletonShimmer 1.2s ease-in-out infinite;"></div>'.repeat(4)}
+          </div>
+          <style>@keyframes cxSkeletonShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>
+        `;
+        _fadeInMainContent(content);
+      }
       fetch(`/api/contacts?phone=${encodeURIComponent(phone)}`)
         .then(response => response.json())
         .then(contacts => {
           allContacts = contacts; // Store contacts for search functionality
           renderContacts(contacts);
+          _fadeInMainContent(document.getElementById('main-content'));
         })
         .catch(error => {
           console.error('Error loading contacts:', error);
@@ -1150,6 +1181,7 @@
               <p style="color: red;">Failed to load contacts. Please try again.</p>
             </div>
           `;
+          _fadeInMainContent(content);
         });
     }
 
@@ -2162,9 +2194,16 @@
       if (content) {
         content.style.transition = 'none';
         content.style.transform = 'translateX(0)';
-        content.classList.remove('tab-fade-in');
-        void content.offsetWidth; // restart the animation every time
-        content.classList.add('tab-fade-in');
+        // 'chat' and 'profile' fetch their real content asynchronously —
+        // fading in right here would just fade in the PREVIOUS tab's
+        // leftover content for a beat, then swap it abruptly the moment the
+        // fetch resolves (the "flash"). Those two trigger the fade
+        // themselves, right after their real content is actually rendered.
+        if (tabName !== 'chat' && tabName !== 'profile') {
+          content.classList.remove('tab-fade-in');
+          void content.offsetWidth; // restart the animation every time
+          content.classList.add('tab-fade-in');
+        }
       }
     };
 
@@ -2805,6 +2844,7 @@
       }
       content.innerHTML = `<div style="display:flex;justify-content:center;padding:40px 0;"><div style="width:28px;height:28px;border:3px solid #0E4950;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;"></div></div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+      _fadeInMainContent(content);
 
       fetch('/api/profile?phone=' + encodeURIComponent(phone))
         .then(r => r.json())
@@ -2813,11 +2853,12 @@
           // Also fetch social stats in parallel
           fetch('/api/social/user_stats?phone=' + encodeURIComponent(phone))
             .then(r => r.json())
-            .then(stats => renderProfileTab(data, stats))
-            .catch(() => renderProfileTab(data, {}));
+            .then(stats => { renderProfileTab(data, stats); _fadeInMainContent(document.getElementById('main-content')); })
+            .catch(() => { renderProfileTab(data, {}); _fadeInMainContent(document.getElementById('main-content')); })
         })
         .catch(() => {
           content.innerHTML = `<div class="placeholder-content"><p style="color:red;">Failed to load profile.</p></div>`;
+          _fadeInMainContent(content);
         });
     }
 

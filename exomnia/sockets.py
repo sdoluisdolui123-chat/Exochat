@@ -794,6 +794,43 @@ def handle_set_presence(data):
     except Exception as e:
         print(f"Error in set_presence: {e}")
 
+@socketio.on('watch_contacts')
+def on_watch_contacts(data):
+    """Register the caller as a watcher of a batch of contact phones (e.g. the
+    whole contact list on the dashboard, not just one open chat), and reply
+    right away with each contact's current online/last-seen status so the
+    contact list can render it without waiting for a change to happen."""
+    try:
+        user = str(data.get('phone', '')).strip()
+        contacts = data.get('contacts', []) or []
+        if not user or not contacts:
+            return
+
+        contacts = [str(c).strip() for c in contacts if str(c).strip()]
+
+        conn = get_db_connection()
+        try:
+            c = conn.cursor()
+            placeholders = ','.join('?' * len(contacts))
+            c.execute(f"SELECT phone, last_online FROM users WHERE phone IN ({placeholders})", contacts)
+            last_online_by_phone = {row[0]: row[1] for row in c.fetchall()}
+        finally:
+            return_db_connection(conn)
+
+        statuses = []
+        for contact in contacts:
+            _add_watcher(contact, user)
+            if _user_online(contact):
+                statuses.append({'phone': contact, 'status': 'online', 'last_online': None})
+            else:
+                statuses.append({'phone': contact, 'status': 'offline',
+                                  'last_online': last_online_by_phone.get(contact)})
+
+        emit('contacts_presence_snapshot', {'statuses': statuses}, room=request.sid)
+    except Exception as e:
+        print(f"Error in watch_contacts: {e}")
+
+
 @socketio.on('heartbeat')
 def handle_heartbeat(data):
     try:
